@@ -1,0 +1,69 @@
+<ion-view>
+<div class="bar bar-header bar-balanced">
+	<a class="button icon ion-chevron-left button-clear" ui-sref="alarmSetting"></a>
+    <h1 class="title">
+      修改光照设置
+    </h1>
+</div>
+
+</div>
+    <ion-content class="has-header">
+    	<label class="item item-input"> 
+            <span class="input-label fontColor">周龄</span>
+              <i class="icon ion-ios-arrow-forward"></i> 
+                <input type         =  "text"
+                       ng-model     =  "updateLuxData.tableData.day_age"
+                       style        =  "background: #FFF;" 
+                       disabled/> 
+        </label>
+        <label class="item item-input"> 
+            <span class="input-label fontColor">光照上限</span>
+              <i class="icon ion-ios-arrow-forward"></i> 
+                <input type         =  "text"
+                       ng-model     =  "updateLuxData.tableData.high_lux"
+                       onfocus="if(this.value==0)this.value='';" 
+                       onblur="if(this.value=='')this.value=0;"/> 
+        </label>
+        <label class="item item-input"> 
+            <span class="input-label fontColor">光照下限</span>
+              <i class="icon ion-ios-arrow-forward"></i> 
+                <input type         =  "text"
+                       ng-model     =  "updateLuxData.tableData.low_lux"
+                       onfocus="if(this.value==0)this.value='';" 
+                       onblur="if(this.value=='')this.value=0;"/> 
+        </label>
+        <label class="item item-input"> 
+            <span class="input-label fontColor">光照参照</span>
+              <i class="icon ion-ios-arrow-forward"></i> 
+                <input type         =  "text"
+                       ng-model     =  "updateLuxData.tableData.set_lux"
+                       onfocus="if(this.value==0)this.value='';" 
+                       onblur="if(this.value=='')this.value=0;"/> 
+        </label>
+
+        <label class="item item-input item-select">
+              <span class="input-label fontColor">开始时间</span>
+              <i class="icon ion-ios-arrow-forward"></i>
+              <select ng-model="updateLuxData.tableData.start_time">
+                  <option value="{{key}}" ng-repeat="(key,val) in myConfig.start_time" ng-selected="key==updateLuxData.tableData.start_time">{{val}}</option>
+              </select>
+         </label>
+
+         <label class="item item-input item-select">
+              <span class="input-label fontColor">结束时间</span>
+              <i class="icon ion-ios-arrow-forward"></i>
+              <select ng-model="updateLuxData.tableData.end_time">
+                  <option value="{{key}}" ng-repeat="(key,val) in myConfig.end_time" ng-selected="key==updateLuxData.tableData.end_time">{{val}}</option>
+              </select>
+         </label>
+        <br>
+		<div class="middle"> 
+		<a class           =  "button  button-balanced saveBtn"
+		   ng-click        =  "updateLuxSave()" 
+		   nav-transition  =  "android">
+		   保   存
+		</a> 
+		</div>
+    </ion-content>
+</ion-view>
+
