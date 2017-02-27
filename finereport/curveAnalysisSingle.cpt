@@ -4,11 +4,6 @@
 <TableData name="ds1" class="com.fr.data.impl.DBTableData">
 <Parameters>
 <Parameter>
-<Attributes name="house_id"/>
-<O>
-<![CDATA[]]></O>
-</Parameter>
-<Parameter>
 <Attributes name="user_id"/>
 <O>
 <![CDATA[1]]></O>
@@ -16,12 +11,17 @@
 <Parameter>
 <Attributes name="org_id"/>
 <O>
-<![CDATA[]]></O>
+<![CDATA[108]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="index"/>
+<O>
+<![CDATA[1]]></O>
 </Parameter>
 <Parameter>
 <Attributes name="farm_id"/>
 <O>
-<![CDATA[]]></O>
+<![CDATA[110]]></O>
 </Parameter>
 </Parameters>
 <Attributes maxMemRowCount="-1"/>
@@ -30,9 +30,24 @@
 <![CDATA[zdyj]]></DatabaseName>
 </Connection>
 <Query>
-<![CDATA[SELECT h1.*,
-      ROUND((h1.母鸡死淘累计/h1.母鸡进鸡数)*100,1) as 母鸡累计死淘率,
-      ROUND((h1.母实际均匀度 + h1.公实际均匀度)/2,1) as 实际均匀度
+<![CDATA[select z.*,
+      (CASE WHEN ${index}=1 THEN ROUND(z.母鸡累计死淘率, 1)
+        WHEN ${index}=2 THEN ROUND(z.母鸡标准累计死淘率, 1)
+        WHEN ${index}=3 THEN ROUND(z.实际均匀度, 1)
+         WHEN ${index}=4 THEN ROUND(z.标准均匀度, 1)
+         WHEN ${index}=5 THEN ROUND(z.实际日耗量, 1)
+         WHEN ${index}=6 THEN ROUND(z.标准日耗量, 1)
+         WHEN ${index}=7 THEN ROUND(z.实际母均重, 1)
+         WHEN ${index}=8 THEN ROUND(z.母鸡标准体重高, 1)
+         WHEN ${index}=9 THEN ROUND(z.母鸡标准体重低, 1)
+         WHEN ${index}=10 THEN ROUND(z.实际公均重, 1)
+         WHEN ${index}=11 THEN ROUND(z.标准公均重, 1)
+        ELSE ''
+  END) indexColumn
+from (
+SELECT h1.*,
+      (h1.母鸡死淘累计/h1.母鸡进鸡数)*100 as 母鸡累计死淘率,
+      (h1.母实际均匀度 + h1.公实际均匀度)/2 as 实际均匀度
 FROM(
 SELECT n1.*,
        (SELECT SUM(IFNULL(tmp.female_cur_cd,0) + IFNULL(tmp.female_mistake,0))
@@ -111,7 +126,6 @@ AND tmp.growth_date = (SELECT a.operation_date FROM s_b_batch_change a WHERE a.b
           WHERE u.id = '${user_id}' and h.house_type=1
           ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}
           ${if(len(farm_id)==0,"","and t1.farm_id='"+farm_id+"'")}
-          ${if(len(house_id)==0,"","and t1.house_code='"+house_id+"'")}
            GROUP BY o.id,
              o.parent_id,
              f.farm_name_chs,
@@ -129,7 +143,9 @@ LEFT JOIN s_b_breed_detail m3
            AND m1.end_growth_date = m3.growth_date)n1
 LEFT JOIN s_b_growing_std n2
   ON n1.feed_type = n2.variety_id
-AND n1.growth_week_age = n2.grow_week_age)h1]]></Query>
+AND n1.growth_week_age = n2.grow_week_age)h1
+)z
+order by z.farm_id,z.house_code,z.begin_growth_date]]></Query>
 </TableData>
 <TableData name="农场" class="com.fr.data.impl.DBTableData">
 <Parameters>
@@ -287,11 +303,6 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND o.freeze_status=0 AND u.id = '${use
 <TableData name="产蛋" class="com.fr.data.impl.DBTableData">
 <Parameters>
 <Parameter>
-<Attributes name="house_id"/>
-<O>
-<![CDATA[]]></O>
-</Parameter>
-<Parameter>
 <Attributes name="user_id"/>
 <O>
 <![CDATA[1]]></O>
@@ -302,9 +313,14 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND o.freeze_status=0 AND u.id = '${use
 <![CDATA[108]]></O>
 </Parameter>
 <Parameter>
-<Attributes name="farm_id"/>
+<Attributes name="index2"/>
 <O>
 <![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="farm_id"/>
+<O>
+<![CDATA[111]]></O>
 </Parameter>
 </Parameters>
 <Attributes maxMemRowCount="-1"/>
@@ -313,11 +329,23 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND o.freeze_status=0 AND u.id = '${use
 <![CDATA[zdyj]]></DatabaseName>
 </Connection>
 <Query>
-<![CDATA[SELECT 
+<![CDATA[select z.*,
+       (CASE WHEN ${index2}=1 THEN ROUND(z.实际产蛋率, 1)
+        WHEN ${index2}=2 THEN ROUND(z.标准产蛋率, 1)
+        WHEN ${index2}=3 THEN ROUND(z.实际母均重, 1)
+         WHEN ${index2}=4 THEN ROUND(z.标准母均重, 1)
+         WHEN ${index2}=5 THEN ROUND(z.母鸡累计死淘率, 1)
+         WHEN ${index2}=6 THEN ROUND(z.母鸡标准累计死淘率, 1)
+         WHEN ${index2}=7 THEN ROUND(z.每只入舍母鸡累计产合格蛋数, 1)
+         WHEN ${index2}=8 THEN ROUND(z.入舍母鸡累计产合格蛋数标准, 1)
+        ELSE ''
+  END) indexColumn
+from (
+SELECT 
     h1.*,
-    ROUND((h1.母鸡死淘累计/h1.母鸡进鸡数)*100,1) as 母鸡累计死淘率,
-    ROUND(h1.周产蛋数/h1.母鸡存栏数,1) as 实际产蛋率,
-    ROUND(h1.累计合格蛋数 / h1.母鸡进鸡数,1) as 每只入舍母鸡累计产合格蛋数
+    (h1.母鸡死淘累计/h1.母鸡进鸡数)*100 as 母鸡累计死淘率,
+    h1.周产蛋数/h1.母鸡存栏数 as 实际产蛋率,
+    h1.累计合格蛋数 / h1.母鸡进鸡数 as 每只入舍母鸡累计产合格蛋数
 FROM(
 SELECT
     n1.*
@@ -330,7 +358,7 @@ SELECT
      WHERE n1.batch_id=tmp.batch_id
            AND tmp.growth_week_age<=n1.growth_week_age) as 累计合格蛋数
 
-  ,n3.female_weight/100 as 标准母均重
+  ,n3.female_weight as 标准母均重
   ,n3.cl_laying_rate as 标准产蛋率
   ,n3.rs_female_total_qualified_count as 入舍母鸡累计产合格蛋数标准
   ,n3.female_week_total_weed_out as 母鸡标准累计死淘率
@@ -362,7 +390,7 @@ where a.batch_id = t1.batch_id
 and a.operation_type = 2))                                    母鸡进鸡数,
              ROUND(SUM(t1.female_cur_weight) / SUM(CASE WHEN t1.female_cur_weight IS NOT NULL AND t1.female_cur_weight > 0
                THEN 1
-                                             ELSE 0 END)/100,1)     AS 实际母均重,
+                                             ELSE 0 END)/100,2)     AS 实际母均重,
              sum(ifnull(t5.female_dj, 0))                     AS 母鸡调鸡数,
              sum(t1.laying_cur_amount)                        AS 周产蛋数
            FROM s_b_batch_curr c
@@ -400,7 +428,6 @@ and a.operation_type = 2))                                    母鸡进鸡数,
          WHERE u.id = '${user_id}' and h.house_type=2
           ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}
           ${if(len(farm_id)==0,"","and t1.farm_id='"+farm_id+"'")}
-          ${if(len(house_id)==0,"","and t1.house_code='"+house_id+"'")}
            GROUP BY o.id,
              o.parent_id,
              f.farm_name_chs,
@@ -424,7 +451,139 @@ LEFT JOIN s_b_lay_egg_std n3
   ON n1.feed_type = n3.variety_id
       AND n1.生产周龄 = n3.lay_egg_week_age
 ) h1
-order by h1.growth_week_age ]]></Query>
+order by h1.growth_week_age 
+)z
+order by z.farm_id,z.house_code,z.begin_growth_date ]]></Query>
+</TableData>
+<TableData name="ds2" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="house_type"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[zdyj]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[select 
+distinct 1 as test,
+'母鸡累计死淘率' as name
+from s_d_organization
+where 1 = '${house_type}'
+union
+select 
+distinct 2 as test,
+'母鸡标准累计死淘率' as name
+from s_d_organization
+where 1 = '${house_type}'
+union
+select 
+distinct 3 as test,
+'实际均匀度' as name
+from s_d_organization
+where 1 = '${house_type}'
+union
+select 
+distinct 4 as test,
+'标准均匀度' as name
+from s_d_organization
+where 1 = '${house_type}'
+union
+select 
+distinct 5 as test,
+'实际日耗量' as name
+from s_d_organization
+where 1 = '${house_type}'
+union
+select 
+distinct 6 as test,
+'标准日耗量' as name
+from s_d_organization
+where 1 = '${house_type}'
+union
+select 
+distinct 7 as test,
+'实际母均重' as name
+from s_d_organization
+where 1 = '${house_type}'
+union
+select 
+distinct 8 as test,
+'母鸡标准体重高' as name
+from s_d_organization
+where 1 = '${house_type}'
+union
+select 
+distinct 9 as test,
+'母鸡标准体重低' as name
+from s_d_organization
+where 1 = '${house_type}'
+union
+select 
+distinct 10 as test,
+'实际公均重' as name
+from s_d_organization
+where 1 = '${house_type}'
+union
+select 
+distinct 11 as test,
+'标准公均重' as name
+from s_d_organization
+where 1 = '${house_type}'
+union
+select 
+distinct 12 as test,
+'实际产蛋率' as name
+from s_d_organization
+where 2 = '${house_type}'
+union
+select 
+distinct 13 as test,
+'标准产蛋率' as name
+from s_d_organization
+where 2 = '${house_type}'
+union
+select 
+distinct 14 as test,
+'母鸡实际体重' as name
+from s_d_organization
+where 2 = '${house_type}'
+union
+select 
+distinct 15 as test,
+'母鸡标准体重' as name
+from s_d_organization
+where 2 = '${house_type}'
+union
+select 
+distinct 16 as test,
+'母鸡累计死淘率' as name
+from s_d_organization
+where 2 = '${house_type}'
+union
+select 
+distinct 17 as test,
+'母鸡标准累计死淘率' as name
+from s_d_organization
+where 2 = '${house_type}'
+union
+select 
+distinct 18 as test,
+'实际累计合格蛋数' as name
+from s_d_organization
+where 2 = '${house_type}'
+union
+select 
+distinct 19 as test,
+'标准累计合格蛋数' as name
+from s_d_organization
+where 2 = '${house_type}'
+
+]]></Query>
 </TableData>
 </TableDataMap>
 <ReportWebAttr>
@@ -661,7 +820,7 @@ reportFrame.style.left = "3px";]]></Content>
 </Attr>
 <Attr class="com.fr.plugin.chart.base.VanChartAttrLine">
 <VanAttrLine>
-<Attr lineWidth="2" lineStyle="0" nullValueBreak="true"/>
+<Attr lineWidth="2" lineStyle="2" nullValueBreak="true"/>
 </VanAttrLine>
 </Attr>
 <Attr class="com.fr.plugin.chart.base.VanChartAttrMarker">
@@ -673,96 +832,6 @@ reportFrame.style.left = "3px";]]></Content>
 </AttrList>
 </ConditionAttr>
 </DefaultAttr>
-<ConditionAttrList>
-<List index="0">
-<ConditionAttr name="条件属性1">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.VanChartAttrMarker">
-<VanAttrMarker>
-<Attr isCommon="true" markerType="RoundFilledMarker" radius="4.5" width="30.0" height="30.0"/>
-<Background name="NullBackground"/>
-</VanAttrMarker>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[1]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="1">
-<ConditionAttr name="条件属性2">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.VanChartAttrMarker">
-<VanAttrMarker>
-<Attr isCommon="true" markerType="RoundFilledMarker" radius="4.5" width="30.0" height="30.0"/>
-<Background name="NullBackground"/>
-</VanAttrMarker>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[3]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="2">
-<ConditionAttr name="条件属性3">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.VanChartAttrMarker">
-<VanAttrMarker>
-<Attr isCommon="true" markerType="RoundFilledMarker" radius="4.5" width="30.0" height="30.0"/>
-<Background name="NullBackground"/>
-</VanAttrMarker>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[5]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="3">
-<ConditionAttr name="条件属性5">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.VanChartAttrMarker">
-<VanAttrMarker>
-<Attr isCommon="true" markerType="RoundFilledMarker" radius="4.5" width="30.0" height="30.0"/>
-<Background name="NullBackground"/>
-</VanAttrMarker>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[10]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-</ConditionAttrList>
 </ConditionCollection>
 <Legend4VanChart>
 <Legend>
@@ -808,16 +877,16 @@ reportFrame.style.left = "3px";]]></Content>
 <FillStyleName fillStyleName=""/>
 <isCustomFillStyle isCustomFillStyle="true"/>
 <ColorList>
-<OColor colvalue="-16724788"/>
-<OColor colvalue="-16751104"/>
 <OColor colvalue="-13312"/>
+<OColor colvalue="-16751104"/>
+<OColor colvalue="-6736897"/>
 <OColor colvalue="-13369549"/>
-<OColor colvalue="-10066330"/>
+<OColor colvalue="-6710887"/>
 <OColor colvalue="-16737946"/>
-<OColor colvalue="-3407617"/>
-<OColor colvalue="-65536"/>
 <OColor colvalue="-13421569"/>
-<OColor colvalue="-65281"/>
+<OColor colvalue="-65536"/>
+<OColor colvalue="-3407668"/>
+<OColor colvalue="-26164"/>
 <OColor colvalue="-6711040"/>
 <OColor colvalue="-945550"/>
 <OColor colvalue="-4092928"/>
@@ -878,7 +947,7 @@ reportFrame.style.left = "3px";]]></Content>
 <ArrowShow arrowShow="false"/>
 <TextAttr>
 <Attr alignText="0">
-<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+<FRFont name="微软雅黑" style="0" size="88" foreground="-10066330"/>
 </Attr>
 </TextAttr>
 <AxisLabelCount value="=1"/>
@@ -908,8 +977,10 @@ reportFrame.style.left = "3px";]]></Content>
 <Attr alpha="1.0"/>
 </AttrAlpha>
 </GI>
-<O>
-<![CDATA[日耗量(克\\只)均匀度(%)]]></O>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($index = 1 || $index = 2, "累计死淘率(%)", if($index = 3 || $index = 4, "均匀度(%)", if($index = 5 || $index = 6, "日耗量(克/只)", "均重(克/只)")))]]></Attributes>
+</O>
 <TextAttr>
 <Attr rotation="90" alignText="0">
 <FRFont name="微软雅黑" style="1" size="88" foreground="-10066330"/>
@@ -939,361 +1010,25 @@ reportFrame.style.left = "3px";]]></Content>
 <customBackgroundList/>
 <VanChartValueAxisAttr isLog="false" baseLog="=10"/>
 </VanChartAxis>
-<VanChartAxis class="com.fr.plugin.chart.attr.axis.VanChartValueAxis">
-<Title>
-<GI>
-<AttrBackground>
-<Background name="NullBackground"/>
-<Attr shadow="false"/>
-</AttrBackground>
-<AttrBorder>
-<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
-<newColor borderColor="-16777216"/>
-</AttrBorder>
-<AttrAlpha>
-<Attr alpha="1.0"/>
-</AttrAlpha>
-</GI>
-<O>
-<![CDATA[均重(克\\只)]]></O>
-<TextAttr>
-<Attr rotation="-90" alignText="0">
-<FRFont name="微软雅黑" style="1" size="88" foreground="-10066330"/>
-</Attr>
-</TextAttr>
-<TitleVisible value="true" position="0"/>
-</Title>
-<newAxisAttr isShowAxisLabel="true"/>
-<AxisLineStyle AxisStyle="1" MainGridStyle="1"/>
-<newLineColor lineColor="-16777216"/>
-<AxisPosition value="4"/>
-<TickLine201106 type="2" secType="0"/>
-<ArrowShow arrowShow="false"/>
-<TextAttr>
-<Attr alignText="0">
-<FRFont name="微软雅黑" style="0" size="88" foreground="-10066330"/>
-</Attr>
-</TextAttr>
-<AxisLabelCount value="=1"/>
-<AxisRange/>
-<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
-<ZoomAxisAttr isZoom="false"/>
-<axisReversed axisReversed="false"/>
-<VanChartAxisAttr mainTickLine="0" secTickLine="0" axisName="Y轴2" titleUseHtml="false" autoLabelGap="true" limitSize="false" maxHeight="15.0" commonValueFormat="true" isRotation="false"/>
-<HtmlLabel customText="function(){ return this; }" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
-<alertList/>
-<customBackgroundList/>
-<VanChartValueAxisAttr isLog="false" baseLog="=10"/>
-</VanChartAxis>
-<VanChartAxis class="com.fr.plugin.chart.attr.axis.VanChartValueAxis">
-<Title>
-<GI>
-<AttrBackground>
-<Background name="NullBackground"/>
-<Attr shadow="false"/>
-</AttrBackground>
-<AttrBorder>
-<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
-<newColor borderColor="-16777216"/>
-</AttrBorder>
-<AttrAlpha>
-<Attr alpha="1.0"/>
-</AttrAlpha>
-</GI>
-<O>
-<![CDATA[累计死淘率(%)]]></O>
-<TextAttr>
-<Attr rotation="-90" alignText="0">
-<FRFont name="微软雅黑" style="1" size="88" foreground="-10066330"/>
-</Attr>
-</TextAttr>
-<TitleVisible value="true" position="0"/>
-</Title>
-<newAxisAttr isShowAxisLabel="true"/>
-<AxisLineStyle AxisStyle="1" MainGridStyle="1"/>
-<newLineColor lineColor="-16777216"/>
-<AxisPosition value="4"/>
-<TickLine201106 type="2" secType="0"/>
-<ArrowShow arrowShow="false"/>
-<TextAttr>
-<Attr alignText="0">
-<FRFont name="微软雅黑" style="0" size="88" foreground="-10066330"/>
-</Attr>
-</TextAttr>
-<AxisLabelCount value="=1"/>
-<AxisRange minValue="=0" maxValue="=5"/>
-<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
-<ZoomAxisAttr isZoom="false"/>
-<axisReversed axisReversed="false"/>
-<VanChartAxisAttr mainTickLine="2" secTickLine="0" axisName="Y轴3" titleUseHtml="false" autoLabelGap="true" limitSize="false" maxHeight="15.0" commonValueFormat="true" isRotation="false"/>
-<HtmlLabel customText="function(){ return this; }" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
-<alertList/>
-<customBackgroundList/>
-<VanChartValueAxisAttr isLog="false" baseLog="=10"/>
-</VanChartAxis>
 </YAxisList>
 <stackAndAxisCondition>
 <ConditionCollection>
 <DefaultAttr class="com.fr.chart.chartglyph.ConditionAttr">
 <ConditionAttr name=""/>
 </DefaultAttr>
-<ConditionAttrList>
-<List index="0">
-<ConditionAttr name="堆积和坐标轴1">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="2" stacked="true" percentStacked="false" stackID="堆积和坐标轴1"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O t="I">
-<![CDATA[1]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="1">
-<ConditionAttr name="堆积和坐标轴2">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="2" stacked="true" percentStacked="false" stackID="堆积和坐标轴2"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[2]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="2">
-<ConditionAttr name="堆积和坐标轴3">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="0" stacked="true" percentStacked="false" stackID="堆积和坐标轴3"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[3]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="3">
-<ConditionAttr name="堆积和坐标轴4">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="0" stacked="true" percentStacked="false" stackID="堆积和坐标轴4"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[4]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="4">
-<ConditionAttr name="堆积和坐标轴5">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="0" stacked="true" percentStacked="false" stackID="堆积和坐标轴5"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[5]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="5">
-<ConditionAttr name="堆积和坐标轴6">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="0" stacked="true" percentStacked="false" stackID="堆积和坐标轴6"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[6]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="6">
-<ConditionAttr name="堆积和坐标轴7">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="1" stacked="true" percentStacked="false" stackID="堆积和坐标轴7"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[7]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="7">
-<ConditionAttr name="堆积和坐标轴8">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="1" stacked="true" percentStacked="false" stackID="堆积和坐标轴8"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[8]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="8">
-<ConditionAttr name="堆积和坐标轴9">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="1" stacked="true" percentStacked="false" stackID="堆积和坐标轴9"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[9]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="9">
-<ConditionAttr name="堆积和坐标轴10">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="1" stacked="true" percentStacked="false" stackID="堆积和坐标轴10"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[10]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="10">
-<ConditionAttr name="堆积和坐标轴11">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="1" stacked="true" percentStacked="false" stackID="堆积和坐标轴11"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[11]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-</ConditionAttrList>
 </ConditionCollection>
 </stackAndAxisCondition>
 </Plot>
 <DataProcessor class="com.fr.base.chart.chartdata.model.NormalDataModel"/>
 <ChartDefinition>
-<MoreNameCDDefinition>
+<OneValueCDDefinition seriesName="house_name" valueName="indexColumn" function="com.fr.data.util.function.NoneFunction">
 <Top topCate="-1" topValue="-1" isDiscardOtherCate="false" isDiscardOtherSeries="false" isDiscardNullCate="false" isDiscardNullSeries="false"/>
 <TableData class="com.fr.data.impl.NameTableData">
 <Name>
 <![CDATA[ds1]]></Name>
 </TableData>
 <CategoryName value="growth_week_age"/>
-<ChartSummaryColumn name="母鸡累计死淘率" function="com.fr.data.util.function.NoneFunction" customName="母鸡累计死淘率"/>
-<ChartSummaryColumn name="母鸡标准累计死淘率" function="com.fr.data.util.function.NoneFunction" customName="母鸡标准累计死淘率"/>
-<ChartSummaryColumn name="实际均匀度" function="com.fr.data.util.function.NoneFunction" customName="实际均匀度"/>
-<ChartSummaryColumn name="标准均匀度" function="com.fr.data.util.function.NoneFunction" customName="标准均匀度"/>
-<ChartSummaryColumn name="实际日耗量" function="com.fr.data.util.function.NoneFunction" customName="实际日耗量"/>
-<ChartSummaryColumn name="标准日耗量" function="com.fr.data.util.function.NoneFunction" customName="标准日耗量"/>
-<ChartSummaryColumn name="实际母均重" function="com.fr.data.util.function.NoneFunction" customName="实际母均重"/>
-<ChartSummaryColumn name="母鸡标准体重高" function="com.fr.data.util.function.NoneFunction" customName="母鸡标准体重高"/>
-<ChartSummaryColumn name="母鸡标准体重低" function="com.fr.data.util.function.NoneFunction" customName="母鸡标准体重低"/>
-<ChartSummaryColumn name="实际公均重" function="com.fr.data.util.function.NoneFunction" customName="实际公均重"/>
-<ChartSummaryColumn name="标准公均重" function="com.fr.data.util.function.NoneFunction" customName="标准公均重"/>
-</MoreNameCDDefinition>
+</OneValueCDDefinition>
 </ChartDefinition>
 </Chart>
 <tools hidden="false" sort="false" export="false" fullScreen="true"/>
@@ -1502,74 +1237,6 @@ reportFrame.style.left = "3px";]]></Content>
 </AttrList>
 </ConditionAttr>
 </DefaultAttr>
-<ConditionAttrList>
-<List index="0">
-<ConditionAttr name="条件属性1">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.VanChartAttrMarker">
-<VanAttrMarker>
-<Attr isCommon="true" markerType="RoundFilledMarker" radius="4.5" width="30.0" height="30.0"/>
-<Background name="NullBackground"/>
-</VanAttrMarker>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[1]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="1">
-<ConditionAttr name="条件属性3">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.VanChartAttrMarker">
-<VanAttrMarker>
-<Attr isCommon="true" markerType="RoundFilledMarker" radius="4.5" width="30.0" height="30.0"/>
-<Background name="NullBackground"/>
-</VanAttrMarker>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[5]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="2">
-<ConditionAttr name="条件属性4">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.VanChartAttrMarker">
-<VanAttrMarker>
-<Attr isCommon="true" markerType="RoundFilledMarker" radius="4.5" width="30.0" height="30.0"/>
-<Background name="NullBackground"/>
-</VanAttrMarker>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[7]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-</ConditionAttrList>
 </ConditionCollection>
 <Legend4VanChart>
 <Legend>
@@ -1615,14 +1282,14 @@ reportFrame.style.left = "3px";]]></Content>
 <FillStyleName fillStyleName=""/>
 <isCustomFillStyle isCustomFillStyle="true"/>
 <ColorList>
-<OColor colvalue="-26368"/>
-<OColor colvalue="-10027162"/>
-<OColor colvalue="-3368704"/>
+<OColor colvalue="-13261"/>
+<OColor colvalue="-16751104"/>
+<OColor colvalue="-3381505"/>
 <OColor colvalue="-16724941"/>
 <OColor colvalue="-65281"/>
 <OColor colvalue="-16724839"/>
 <OColor colvalue="-3394561"/>
-<OColor colvalue="-6697984"/>
+<OColor colvalue="-6684877"/>
 <OColor colvalue="-16744620"/>
 <OColor colvalue="-6187579"/>
 <OColor colvalue="-15714713"/>
@@ -1715,10 +1382,12 @@ reportFrame.style.left = "3px";]]></Content>
 <Attr alpha="1.0"/>
 </AttrAlpha>
 </GI>
-<O>
-<![CDATA[体重(100克)  产蛋率(%)  死淘率(%)]]></O>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($index2 = 1 || $index2 = 2, "产蛋率(%)", if($index2 = 3 || $index2 = 4, "体重(100g)", if($index2 = 5 || $index2 = 6, "累计死淘率(%)", "合格蛋数(枚)")))]]></Attributes>
+</O>
 <TextAttr>
-<Attr rotation="90" alignText="0">
+<Attr rotation="-90" alignText="0">
 <FRFont name="微软雅黑" style="1" size="88" foreground="-10066330"/>
 </Attr>
 </TextAttr>
@@ -1732,7 +1401,7 @@ reportFrame.style.left = "3px";]]></Content>
 <ArrowShow arrowShow="false"/>
 <TextAttr>
 <Attr alignText="0">
-<FRFont name="微软雅黑" style="0" size="88" foreground="-10066330"/>
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
 </Attr>
 </TextAttr>
 <AxisLabelCount value="=1"/>
@@ -1746,249 +1415,25 @@ reportFrame.style.left = "3px";]]></Content>
 <customBackgroundList/>
 <VanChartValueAxisAttr isLog="false" baseLog="=10"/>
 </VanChartAxis>
-<VanChartAxis class="com.fr.plugin.chart.attr.axis.VanChartValueAxis">
-<Title>
-<GI>
-<AttrBackground>
-<Background name="NullBackground"/>
-<Attr shadow="false"/>
-</AttrBackground>
-<AttrBorder>
-<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
-<newColor borderColor="-16777216"/>
-</AttrBorder>
-<AttrAlpha>
-<Attr alpha="1.0"/>
-</AttrAlpha>
-</GI>
-<O>
-<![CDATA[合格蛋数(枚)]]></O>
-<TextAttr>
-<Attr rotation="-90" alignText="0">
-<FRFont name="微软雅黑" style="1" size="88" foreground="-10066330"/>
-</Attr>
-</TextAttr>
-<TitleVisible value="true" position="0"/>
-</Title>
-<newAxisAttr isShowAxisLabel="true"/>
-<AxisLineStyle AxisStyle="1" MainGridStyle="1"/>
-<newLineColor lineColor="-16777216"/>
-<AxisPosition value="4"/>
-<TickLine201106 type="2" secType="0"/>
-<ArrowShow arrowShow="false"/>
-<TextAttr>
-<Attr alignText="0">
-<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
-</Attr>
-</TextAttr>
-<AxisLabelCount value="=1"/>
-<AxisRange/>
-<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
-<ZoomAxisAttr isZoom="false"/>
-<axisReversed axisReversed="false"/>
-<VanChartAxisAttr mainTickLine="0" secTickLine="0" axisName="Y轴2" titleUseHtml="false" autoLabelGap="true" limitSize="false" maxHeight="15.0" commonValueFormat="true" isRotation="false"/>
-<HtmlLabel customText="function(){ return this; }" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
-<alertList/>
-<customBackgroundList/>
-<VanChartValueAxisAttr isLog="false" baseLog="=10"/>
-</VanChartAxis>
 </YAxisList>
 <stackAndAxisCondition>
 <ConditionCollection>
 <DefaultAttr class="com.fr.chart.chartglyph.ConditionAttr">
 <ConditionAttr name=""/>
 </DefaultAttr>
-<ConditionAttrList>
-<List index="0">
-<ConditionAttr name="堆积和坐标轴1">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="0" stacked="true" percentStacked="false" stackID="堆积和坐标轴1"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O t="I">
-<![CDATA[1]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="1">
-<ConditionAttr name="堆积和坐标轴2">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="0" stacked="true" percentStacked="false" stackID="堆积和坐标轴2"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[2]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="2">
-<ConditionAttr name="堆积和坐标轴3">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="0" stacked="true" percentStacked="false" stackID="堆积和坐标轴3"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[3]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="3">
-<ConditionAttr name="堆积和坐标轴4">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="0" stacked="true" percentStacked="false" stackID="堆积和坐标轴4"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[4]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="4">
-<ConditionAttr name="堆积和坐标轴5">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="0" stacked="true" percentStacked="false" stackID="堆积和坐标轴5"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[5]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="5">
-<ConditionAttr name="堆积和坐标轴6">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="0" stacked="true" percentStacked="false" stackID="堆积和坐标轴6"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[6]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="6">
-<ConditionAttr name="堆积和坐标轴7">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="1" stacked="true" percentStacked="false" stackID="堆积和坐标轴7"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[7]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-<List index="7">
-<ConditionAttr name="堆积和坐标轴8">
-<AttrList>
-<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
-<AttrSeriesStackAndAxis>
-<Attr xAxisIndex="0" yAxisIndex="1" stacked="true" percentStacked="false" stackID="堆积和坐标轴8"/>
-</AttrSeriesStackAndAxis>
-</Attr>
-</AttrList>
-<Condition class="com.fr.data.condition.CommonCondition">
-<CNUMBER>
-<![CDATA[0]]></CNUMBER>
-<CNAME>
-<![CDATA[系列序号]]></CNAME>
-<Compare op="0">
-<O>
-<![CDATA[8]]></O>
-</Compare>
-</Condition>
-</ConditionAttr>
-</List>
-</ConditionAttrList>
 </ConditionCollection>
 </stackAndAxisCondition>
 </Plot>
 <DataProcessor class="com.fr.base.chart.chartdata.model.NormalDataModel"/>
 <ChartDefinition>
-<MoreNameCDDefinition>
+<OneValueCDDefinition seriesName="house_name" valueName="indexColumn" function="com.fr.data.util.function.NoneFunction">
 <Top topCate="-1" topValue="-1" isDiscardOtherCate="false" isDiscardOtherSeries="false" isDiscardNullCate="false" isDiscardNullSeries="false"/>
 <TableData class="com.fr.data.impl.NameTableData">
 <Name>
 <![CDATA[产蛋]]></Name>
 </TableData>
 <CategoryName value="growth_week_age"/>
-<ChartSummaryColumn name="实际产蛋率" function="com.fr.data.util.function.NoneFunction" customName="实际产蛋率"/>
-<ChartSummaryColumn name="标准产蛋率" function="com.fr.data.util.function.NoneFunction" customName="标准产蛋率"/>
-<ChartSummaryColumn name="实际母均重" function="com.fr.data.util.function.NoneFunction" customName="母鸡实际体重"/>
-<ChartSummaryColumn name="标准母均重" function="com.fr.data.util.function.NoneFunction" customName="母鸡标准体重"/>
-<ChartSummaryColumn name="母鸡累计死淘率" function="com.fr.data.util.function.NoneFunction" customName="母鸡累计死淘率"/>
-<ChartSummaryColumn name="母鸡标准累计死淘率" function="com.fr.data.util.function.NoneFunction" customName="母鸡标准累计死淘率"/>
-<ChartSummaryColumn name="每只入舍母鸡累计产合格蛋数" function="com.fr.data.util.function.NoneFunction" customName="实际累计合格蛋数/入舍母鸡数"/>
-<ChartSummaryColumn name="入舍母鸡累计产合格蛋数标准" function="com.fr.data.util.function.NoneFunction" customName="标准累计合格蛋数/入舍母鸡数"/>
-</MoreNameCDDefinition>
+</OneValueCDDefinition>
 </ChartDefinition>
 </Chart>
 <tools hidden="false" sort="false" export="false" fullScreen="true"/>
@@ -2077,6 +1522,48 @@ reportFrame.style.left = "3px";]]></Content>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
+<Listener event="stopedit">
+<JavaScript class="com.fr.js.JavaScriptImpl">
+<Parameters/>
+<Content>
+<![CDATA[var type = this.options.form.getWidgetByName("house_type").getValue();
+
+var index1= this.options.form.getWidgetByName("index");
+var index2= this.options.form.getWidgetByName("index2");
+if(type==1){
+	index1.setVisible(true)
+	index2.setVisible(false)
+	//index2.visible();
+    // index1.invisible();
+}else if(type==2){
+	index1.setVisible(false)
+	index2.setVisible(true)
+	//index1.visible();
+    // index2.invisible();
+	}]]></Content>
+</JavaScript>
+</Listener>
+<Listener event="afterinit">
+<JavaScript class="com.fr.js.JavaScriptImpl">
+<Parameters/>
+<Content>
+<![CDATA[var type = this.options.form.getWidgetByName("house_type").getValue();
+
+var index1= this.options.form.getWidgetByName("index");
+var index2= this.options.form.getWidgetByName("index2");
+if(type==1){
+	index1.setVisible(true)
+	index2.setVisible(false)
+	//index2.visible();
+    // index1.invisible();
+}else if(type==2){
+	index1.setVisible(false)
+	index2.setVisible(true)
+	//index1.visible();
+    // index2.invisible();
+	}]]></Content>
+</JavaScript>
+</Listener>
 <WidgetName name="farm_id"/>
 <WidgetAttr description="">
 <PrivilegeControl/>
@@ -2105,7 +1592,7 @@ reportFrame.style.left = "3px";]]></Content>
 </WidgetAttr>
 <widgetValue>
 <O>
-<![CDATA[    栋舍:]]></O>
+<![CDATA[    指标:]]></O>
 </widgetValue>
 <LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
 <FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
@@ -2115,25 +1602,35 @@ reportFrame.style.left = "3px";]]></Content>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
-<WidgetName name="house_id"/>
+<WidgetName name="index"/>
 <WidgetAttr description="">
 <PrivilegeControl/>
 </WidgetAttr>
-<Dictionary class="com.fr.data.impl.TableDataDictionary">
-<FormulaDictAttr kiName="house_id" viName="house_name"/>
-<TableDataDictAttr>
-<TableData class="com.fr.data.impl.NameTableData">
-<Name>
-<![CDATA[栋舍]]></Name>
-</TableData>
-</TableDataDictAttr>
+<allowBlank>
+<![CDATA[false]]></allowBlank>
+<Dictionary class="com.fr.data.impl.CustomDictionary">
+<CustomDictAttr>
+<Dict key="1" value="母鸡累计死淘率"/>
+<Dict key="2" value="母鸡标准累计死淘率"/>
+<Dict key="3" value="实际均匀度"/>
+<Dict key="4" value="标准均匀度"/>
+<Dict key="5" value="实际日耗量"/>
+<Dict key="6" value="标准日耗量"/>
+<Dict key="7" value="实际母均重"/>
+<Dict key="8" value="母鸡标准体重高"/>
+<Dict key="9" value="母鸡标准体重低"/>
+<Dict key="10" value="实际公均重"/>
+<Dict key="11" value="标准公均重"/>
+</CustomDictAttr>
 </Dictionary>
 <widgetValue>
-<databinding>
-<![CDATA[{Name:栋舍,Key:house_id}]]></databinding>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=1]]></Attributes>
+</O>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="313" y="8" width="121" height="21"/>
+<BoundsAttr x="313" y="8" width="137" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.parameter.FormSubmitButton">
@@ -2147,62 +1644,6 @@ reportFrame.style.left = "3px";]]></Content>
 <![CDATA[enter]]></Hotkeys>
 </InnerWidget>
 <BoundsAttr x="473" y="8" width="80" height="21"/>
-</Widget>
-<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
-<InnerWidget class="com.fr.form.ui.ComboBox">
-<WidgetName name="house_type"/>
-<WidgetAttr invisible="true" description="">
-<PrivilegeControl/>
-</WidgetAttr>
-<Dictionary class="com.fr.data.impl.TableDataDictionary">
-<FormulaDictAttr kiName="house_type" viName="house_type"/>
-<TableDataDictAttr>
-<TableData class="com.fr.data.impl.NameTableData">
-<Name>
-<![CDATA[栋舍]]></Name>
-</TableData>
-</TableDataDictAttr>
-</Dictionary>
-<widgetValue>
-<databinding>
-<![CDATA[{Name:栋舍,Key:house_type}]]></databinding>
-</widgetValue>
-</InnerWidget>
-<BoundsAttr x="416" y="64" width="114" height="21"/>
-</Widget>
-<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
-<InnerWidget class="com.fr.form.ui.FreeButton">
-<Listener event="click">
-<JavaScript class="com.fr.js.JavaScriptImpl">
-<Parameters>
-<Parameter>
-<Attributes name="user_id"/>
-<O t="Formula" class="Formula">
-<Attributes>
-<![CDATA[=$user_id]]></Attributes>
-</O>
-</Parameter>
-<Parameter>
-<Attributes name="orgId"/>
-<O t="Formula" class="Formula">
-<Attributes>
-<![CDATA[=$org_id]]></Attributes>
-</O>
-</Parameter>
-</Parameters>
-<Content>
-<![CDATA[
-window.location="ReportServer?reportlet=zdyj/weeklyReport.cpt&user_id="+user_id+"&org_id="+orgId;]]></Content>
-</JavaScript>
-</Listener>
-<WidgetName name="button0"/>
-<WidgetAttr disabled="true" invisible="true" description="">
-<PrivilegeControl/>
-</WidgetAttr>
-<Text>
-<![CDATA[周简报]]></Text>
-</InnerWidget>
-<BoundsAttr x="670" y="8" width="80" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -2223,7 +1664,7 @@ window.location="ReportServer?reportlet=zdyj/weeklyReport.cpt&user_id="+user_id+
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
 <WidgetName name="user_id"/>
-<WidgetAttr invisible="true" description="">
+<WidgetAttr description="">
 <PrivilegeControl/>
 </WidgetAttr>
 <widgetValue>
@@ -2252,7 +1693,7 @@ window.location="ReportServer?reportlet=zdyj/weeklyReport.cpt&user_id="+user_id+
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
 <WidgetName name="org_id"/>
-<WidgetAttr invisible="true" description="">
+<WidgetAttr description="">
 <PrivilegeControl/>
 </WidgetAttr>
 <widgetValue>
@@ -2263,6 +1704,33 @@ window.location="ReportServer?reportlet=zdyj/weeklyReport.cpt&user_id="+user_id+
 <BoundsAttr x="281" y="64" width="111" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.ui.ComboBox">
+<WidgetName name="index2"/>
+<WidgetAttr invisible="true" description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Dictionary class="com.fr.data.impl.CustomDictionary">
+<CustomDictAttr>
+<Dict key="1" value="实际产蛋率"/>
+<Dict key="2" value="标准产蛋率"/>
+<Dict key="3" value="母鸡实际体重"/>
+<Dict key="4" value="母鸡标准体重"/>
+<Dict key="5" value="母鸡累计死淘率"/>
+<Dict key="6" value="母鸡标准累计死淘率"/>
+<Dict key="7" value="实际累计合格蛋数"/>
+<Dict key="8" value="标准累计合格蛋数"/>
+</CustomDictAttr>
+</Dictionary>
+<widgetValue>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=1]]></Attributes>
+</O>
+</widgetValue>
+</InnerWidget>
+<BoundsAttr x="313" y="8" width="137" height="21"/>
+</Widget>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.FreeButton">
 <Listener event="click">
 <JavaScript class="com.fr.js.JavaScriptImpl">
@@ -2271,19 +1739,40 @@ window.location="ReportServer?reportlet=zdyj/weeklyReport.cpt&user_id="+user_id+
 <![CDATA[var user_id = this.options.form.getWidgetByName("user_id").getValue();
 var orgId = this.options.form.getWidgetByName("org_id").getValue();
 var farms = this.options.form.getWidgetByName("farm_id").getValue();
-//var type = this.options.form.getWidgetByName("house_type").getValue();
 
-window.location="ReportServer?reportlet=zdyj/curveAnalysisSingle.cpt&user_id="+user_id+"&org_id="+orgId+"&farm_id="+farms;]]></Content>
+window.location="ReportServer?reportlet=zdyj/curveAnalysis.cpt&user_id="+user_id+"&org_id="+orgId+"&farm_id="+farms;]]></Content>
 </JavaScript>
 </Listener>
-<WidgetName name="button1"/>
+<WidgetName name="button0"/>
 <WidgetAttr description="">
 <PrivilegeControl/>
 </WidgetAttr>
 <Text>
-<![CDATA[单场对比]]></Text>
+<![CDATA[返回]]></Text>
 </InnerWidget>
 <BoundsAttr x="571" y="8" width="80" height="21"/>
+</Widget>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.ui.ComboBox">
+<WidgetName name="house_type"/>
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Dictionary class="com.fr.data.impl.TableDataDictionary">
+<FormulaDictAttr kiName="house_type" viName="house_type"/>
+<TableDataDictAttr>
+<TableData class="com.fr.data.impl.NameTableData">
+<Name>
+<![CDATA[栋舍]]></Name>
+</TableData>
+</TableDataDictAttr>
+</Dictionary>
+<widgetValue>
+<databinding>
+<![CDATA[{Name:栋舍,Key:house_type}]]></databinding>
+</widgetValue>
+</InnerWidget>
+<BoundsAttr x="425" y="64" width="146" height="21"/>
 </Widget>
 <Sorted sorted="false"/>
 <Display display="true"/>
@@ -2292,18 +1781,19 @@ window.location="ReportServer?reportlet=zdyj/curveAnalysisSingle.cpt&user_id="+u
 <Design_Width design_width="998"/>
 <MobileWidgetList>
 <Widget widgetName="farm_id"/>
-<Widget widgetName="house_id"/>
-<Widget widgetName="button1"/>
+<Widget widgetName="index"/>
+<Widget widgetName="index2"/>
 <Widget widgetName="button0"/>
 <Widget widgetName="user_id"/>
 <Widget widgetName="org_id"/>
 <Widget widgetName="house_type"/>
 </MobileWidgetList>
 <WidgetNameTagMap>
-<NameTag name="house_id" tag="    栋舍:"/>
 <NameTag name="user_id" tag="user_id:"/>
 <NameTag name="org_id" tag="org_id:"/>
-<NameTag name="house_type" tag="house_type:"/>
+<NameTag name="index" tag="    指标:"/>
+<NameTag name="index2" tag="    指标:"/>
+<NameTag name="button0" tag="    指标:"/>
 <NameTag name="farm_id" tag="    农场:"/>
 </WidgetNameTagMap>
 </Layout>

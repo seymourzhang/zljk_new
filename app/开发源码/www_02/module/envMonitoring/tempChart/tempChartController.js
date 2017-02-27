@@ -27,9 +27,7 @@
 		};
 		$scope.chartData.farmId = $scope.sparraw_user_temp.farminfo.id;
 		$scope.chartData.selectedHouseId = $scope.sparraw_user_temp.houseinfos[0].id;
-		//$scope.chartData.selectedBatchId = $scope.sparraw_user_temp.farminfo.farmBreedBatchId;
 		for (var i = 0; i < $scope.sparraw_user_temp.houseinfos.length; i++) {
-			console.log($scope.sparraw_user_temp.houseinfos[i]);
 			if ($scope.sparraw_user_temp.houseinfos[i].id == $scope.chartData.selectedHouseId) {
 				$scope.chartData.selectedBatchId = $scope.sparraw_user_temp.houseinfos[i].BreedBatchId;
 			}
@@ -47,7 +45,6 @@
 		if (Condition == "House") {
 			$scope.chartData.selectedHouseId = JSON.parse($scope.chartData.selectedHouseId).id;
 			for (var i = 0; i < $scope.sparraw_user_temp.houseinfos.length; i++) {
-				console.log($scope.sparraw_user_temp.houseinfos[i]);
 				if ($scope.sparraw_user_temp.houseinfos[i].id == $scope.chartData.selectedHouseId) {
 					$scope.chartData.selectedBatchId = $scope.sparraw_user_temp.houseinfos[i].BreedBatchId;
 				}
@@ -84,7 +81,6 @@
 		Sparraw.ajaxPost('tempMobile/tempCurveReq', params, function(data){
 			if (data.ResponseDetail.Result == "Success") {
 				$scope.setChartParams(data);
-				console.log("0293ujde3209de32jk320932jdk90-2d3jd32902323");
 				Echart_initLine02(
 					data.ResponseDetail.xAxis,
 					$scope.tempLineConfig,
@@ -248,7 +244,9 @@
 		$scope.chartData.charType 曲线图类型*/
 		if ($scope.chartData.turn == "up") {
 			if ($scope.chartData.charType == '02') {
+				$scope.chartData.assignOn = "N";
 				$scope.chartData.charType = "01";
+				$scope.chartData.selectedTime = "";
 			}else if ($scope.chartData.charType == '03') {
 				$scope.chartData.assignOn = "Y";
 	      		$scope.chartData.charType = "02";

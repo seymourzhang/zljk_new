@@ -26,7 +26,6 @@
   o.name_cn,
   o.level_id,
   o.level_name,
-  o.freeze_status,
   u.id user_id,
   u.user_code,
   u.user_real_name,
@@ -34,7 +33,6 @@
   f.farm_name_chs,
   h.id house_id,
   h.house_name,
-  h.house_type,
   c.batch_id,
   c.batch_no
 FROM
@@ -83,7 +81,6 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
   o.name_cn,
   o.level_id,
   o.level_name,
-  o.freeze_status,
   u.id user_id,
   u.user_code,
   u.user_real_name,
@@ -91,7 +88,6 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
   f.farm_name_chs,
   h.id house_id,
   h.house_name,
-  h.house_type,
   c.batch_id,
   c.batch_no
 FROM
@@ -183,23 +179,23 @@ order by z.operation_date desc]]></Query>
 <Parameters>
 <Parameter>
 <Attributes name="date"/>
-<O t="Date">
-<![CDATA[1487174400000]]></O>
+<O>
+<![CDATA[2017-02-09]]></O>
 </Parameter>
 <Parameter>
 <Attributes name="batch2_no"/>
 <O>
-<![CDATA[110-118-F8]]></O>
+<![CDATA[110-119-F8]]></O>
 </Parameter>
 <Parameter>
 <Attributes name="house_id"/>
 <O>
-<![CDATA[120]]></O>
+<![CDATA[118]]></O>
 </Parameter>
 <Parameter>
 <Attributes name="batch_no"/>
 <O>
-<![CDATA[111-120-F8]]></O>
+<![CDATA[110-118-F8]]></O>
 </Parameter>
 <Parameter>
 <Attributes name="user_id"/>
@@ -214,17 +210,12 @@ order by z.operation_date desc]]></Query>
 <Parameter>
 <Attributes name="house2_id"/>
 <O>
-<![CDATA[118]]></O>
+<![CDATA[119]]></O>
 </Parameter>
 <Parameter>
 <Attributes name="org_id"/>
 <O>
 <![CDATA[108]]></O>
-</Parameter>
-<Parameter>
-<Attributes name="index"/>
-<O>
-<![CDATA[1]]></O>
 </Parameter>
 <Parameter>
 <Attributes name="farm2_id"/>
@@ -237,9 +228,14 @@ order by z.operation_date desc]]></Query>
 <![CDATA[]]></O>
 </Parameter>
 <Parameter>
+<Attributes name="date_age"/>
+<O>
+<![CDATA[119]]></O>
+</Parameter>
+<Parameter>
 <Attributes name="farm_id"/>
 <O>
-<![CDATA[111]]></O>
+<![CDATA[110]]></O>
 </Parameter>
 </Parameters>
 <Attributes maxMemRowCount="-1"/>
@@ -264,12 +260,15 @@ order by z.operation_date desc]]></Query>
   DATE_FORMAT(str_to_date(RIGHT (d.time, 4),"%H%i"),"%H:%i") as date_age,
   c.batch_id,
   d.batch_no,
-  (CASE WHEN ${index}=1 THEN if(ROUND(d.co2, 1)=-99,'',ROUND(d.co2, 1))
-        WHEN ${index}=2 THEN if(ROUND(d.high_alarm_co2, 1)=-99,'',ROUND(d.high_alarm_co2, 1))
-   ELSE ''
-   END) indexColumn
+  ROUND(d.inside_point_diff, 1) indexColumn
 FROM
-  rpt_monitor_daily d
+  (select a.*,
+   DATEDIFF(a.date,c.operation_date)+c.grow_age as age_date
+  from rpt_monitor_daily a
+  left join s_b_batch_curr c
+  ON c.farm_id = a.farm_id
+    AND c.house_code = a.house_id
+    AND c.batch_no = a.batch_no) d
   LEFT JOIN s_d_house h
     ON h.farm_id = d.farm_id
        AND h.id = d.house_id
@@ -277,7 +276,7 @@ FROM
   LEFT JOIN s_d_farm f
     ON f.id = d.farm_id
     AND f.freeze_status=0
- LEFT JOIN s_b_batch_change c
+   LEFT JOIN s_b_batch_change c
 ON c.farm_id = d.farm_id
 AND c.house_code = d.house_id
 AND c.operation_type = 2
@@ -295,13 +294,9 @@ WHERE u.id = '${user_id}' and
 ${if(searchType==1 && find(':',time)==0,"1=1","1=0")}
 AND d.date = '${date}'
 ${if(len(farm_id)==0,"","and ((d.farm_id='"+farm_id+"'")}
-${if(len(house_id)==0,"","and d.house_id='"+house_id+"'")}
-${if(len(batch_no)==0,"","and c.batch_id='"+batch_no+"')")}
+${if(len(batch_no)==0,"","and substring_index(c.batch_id,'-',-1)=substring_index('"+batch_no+"','-',-1)))")}
  
-${if(len(farm2_id)==0,"","or (d.farm_id='"+farm2_id+"'")}
-${if(len(house2_id)==0,"","and d.house_id='"+house2_id+"'")}
-${if(len(batch2_no)==0,"","and c.batch_id='"+batch2_no+"'))")}
-
+ 
 UNION
 
 SELECT
@@ -319,10 +314,7 @@ SELECT
   d.date_age,
   c.batch_id,
   d.batch_no,
-  (CASE WHEN ${index}=1 THEN if(ROUND(d.co2, 1)=-99,'',ROUND(d.co2, 1))
-        WHEN ${index}=2 THEN if(ROUND(d.high_alarm_co2, 1)=-99,'',ROUND(d.high_alarm_co2, 1))
-   ELSE ''
-   END) indexColumn
+  ROUND(d.inside_point_diff, 1) indexColumn
 FROM
   rpt_monitor_month d
   LEFT JOIN s_d_house h
@@ -348,114 +340,16 @@ LEFT JOIN v_user u
 ON org.id = u.obj_id
 WHERE u.id = '${user_id}' and
 ${if(searchType==2,"1=1","1=0")}
-AND d.date BETWEEN date_sub(str_to_date('${date}', '%Y-%m-%d'), interval 6 day) AND str_to_date('${date}', '%Y-%m-%d')
+and d.date_age in (select date_age
+from rpt_monitor_month d1 
+where d1.date BETWEEN date_sub(str_to_date('${date}', '%Y-%m-%d'), interval 6 day) AND str_to_date('${date}', '%Y-%m-%d')
+${if(len(farm_id)==0,"","and d1.farm_id='"+farm_id+"'")}
+and d1.house_id = (select house_code from s_b_batch_curr
+where operation_date =
+(select min(operation_date) from s_b_batch_curr d1
+${if(len(farm_id)==0,"","where d1.farm_id='"+farm_id+"'")} )))
 ${if(len(farm_id)==0,"","and ((d.farm_id='"+farm_id+"'")}
-${if(len(house_id)==0,"","and d.house_id='"+house_id+"'")}
-${if(len(batch_no)==0,"","and c.batch_id='"+batch_no+"'))")}
-
-UNION
- 
-SELECT
-  u.id user_id,
-  org2.id company_id,
-  org2.name_cn company_name,
-  org.id base_id,
-  org.name_cn base_name,
-  d.farm_id,
-  f.farm_name_chs,
-  d.house_id,
-  h.house_name,
-  d.date,
-  date_format(d.date, '%Y/%m/%d') AS time,
-  d.date_age,
-  c.batch_id,
-  d.batch_no,
-  (CASE WHEN ${index}=1 THEN if(ROUND(d.co2, 1)=-99,'',ROUND(d.co2, 1))
-        WHEN ${index}=2 THEN if(ROUND(d.high_alarm_co2, 1)=-99,'',ROUND(d.high_alarm_co2, 1))
-   ELSE ''
-   END) indexColumn
-FROM
-  rpt_monitor_month d
-  LEFT JOIN s_d_house h
-    ON h.farm_id = d.farm_id
-       AND h.id = d.house_id
-       AND h.freeze_status=0
-  LEFT JOIN s_d_farm f
-    ON f.id = d.farm_id
-    AND f.freeze_status=0
- LEFT JOIN s_b_batch_change c
-ON c.farm_id = d.farm_id
-AND c.house_code = d.house_id
-AND c.operation_type = 2
-  LEFT JOIN s_d_organization org
-    ON org.organization_id = f.id
-       AND org.level_id = (SELECT MAX(level_id)-1 max_level FROM s_d_organization)
-       AND org.freeze_status=0
-       AND org.parent_id = '${org_id}'
-  LEFT JOIN  s_d_organization org2
-    ON org2.id = org.parent_id
-    AND org2.freeze_status=0
-LEFT JOIN v_user u
-ON org.id = u.obj_id
-WHERE u.id = '${user_id}' and
-${if(searchType==2,"1=1","1=0")}
-and d.date_age in (select date_age from rpt_monitor_month d1 where d1.date BETWEEN date_sub(str_to_date('${date}', '%Y-%m-%d'), interval 6 day) AND str_to_date('${date}', '%Y-%m-%d')
-${if(len(farm_id)==0,"","and (d1.farm_id='"+farm_id+"'")}
-${if(len(house_id)==0,"","and d1.house_id='"+house_id+"'")})
-${if(len(farm2_id)==0,"","and (d.farm_id='"+farm2_id+"'")}
-${if(len(house2_id)==0,"","and d.house_id='"+house2_id+"'")}
-${if(len(batch2_no)==0,"","and c.batch_id='"+batch2_no+"'))")}
- 
-UNION
- 
-SELECT
-  u.id user_id,
-  org2.id company_id,
-  org2.name_cn company_name,
-  org.id base_id,
-  org.name_cn base_name,
-  d.farm_id,
-  f.farm_name_chs,
-  d.house_id,
-  h.house_name,
-  d.date,
-  date_format(d.date, '%Y/%m/%d') AS time,
-  d.date_age,
-  c.batch_id,
-  d.batch_no,
- (CASE WHEN ${index}=1 THEN if(ROUND(d.co2, 1)=-99,'',ROUND(d.co2, 1))
-        WHEN ${index}=2 THEN if(ROUND(d.high_alarm_co2, 1)=-99,'',ROUND(d.high_alarm_co2, 1))
-   ELSE ''
-   END) indexColumn
-FROM
-  rpt_monitor_month d
-  LEFT JOIN s_d_house h
-    ON h.farm_id = d.farm_id
-       AND h.id = d.house_id
-       AND h.freeze_status=0
-  LEFT JOIN s_d_farm f
-    ON f.id = d.farm_id
-    AND f.freeze_status=0
-  LEFT JOIN s_b_batch_change c
-ON c.farm_id = d.farm_id
-AND c.house_code = d.house_id
-AND c.operation_type = 2
-  LEFT JOIN s_d_organization org
-    ON org.organization_id = f.id
-       AND org.level_id = (SELECT MAX(level_id)-1 max_level FROM s_d_organization)
-       AND org.freeze_status=0
-       AND org.parent_id = '${org_id}'
-  LEFT JOIN  s_d_organization org2
-    ON org2.id = org.parent_id
-    AND org2.freeze_status=0
-LEFT JOIN v_user u
-ON org.id = u.obj_id
-WHERE u.id = '${user_id}' and
-  ${if(searchType==3,"1=1","1=0")}
-AND d.date BETWEEN date_sub(str_to_date('${date}', '%Y-%m-%d'), interval 29 day) AND str_to_date('${date}', '%Y-%m-%d')
-${if(len(farm_id)==0,"","and ((d.farm_id='"+farm_id+"'")}
-${if(len(house_id)==0,"","and d.house_id='"+house_id+"'")}
-${if(len(batch_no)==0,"","and c.batch_id='"+batch_no+"'))")}
+${if(len(batch_no)==0,"","and substring_index(c.batch_id,'-',-1)=substring_index('"+batch_no+"','-',-1)))")}
 
 union
  
@@ -474,10 +368,7 @@ SELECT
   d.date_age,
   c.batch_id,
   d.batch_no,
- (CASE WHEN ${index}=1 THEN if(ROUND(d.co2, 1)=-99,'',ROUND(d.co2, 1))
-        WHEN ${index}=2 THEN if(ROUND(d.high_alarm_co2, 1)=-99,'',ROUND(d.high_alarm_co2, 1))
-   ELSE ''
-   END) indexColumn
+  ROUND(d.inside_point_diff, 1) indexColumn
 FROM
   rpt_monitor_month d
   LEFT JOIN s_d_house h
@@ -487,7 +378,7 @@ FROM
   LEFT JOIN s_d_farm f
     ON f.id = d.farm_id
     AND f.freeze_status=0
- LEFT JOIN s_b_batch_change c
+   LEFT JOIN s_b_batch_change c
 ON c.farm_id = d.farm_id
 AND c.house_code = d.house_id
 AND c.operation_type = 2
@@ -503,14 +394,18 @@ LEFT JOIN v_user u
 ON org.id = u.obj_id
 WHERE u.id = '${user_id}' and
   ${if(searchType==3,"1=1","1=0")}
-and d.date_age in (select date_age from rpt_monitor_month d1 where d1.date BETWEEN date_sub(str_to_date('${date}', '%Y-%m-%d'), interval 6 day) AND str_to_date('${date}', '%Y-%m-%d')
-${if(len(farm_id)==0,"","and (d1.farm_id='"+farm_id+"'")}
-${if(len(house_id)==0,"","and d1.house_id='"+house_id+"'")})
-${if(len(farm2_id)==0,"","and (d.farm_id='"+farm2_id+"'")}
-${if(len(house2_id)==0,"","and d.house_id='"+house2_id+"'")}
-${if(len(batch2_no)==0,"","and c.batch_id='"+batch2_no+"'))")}
+and d.date_age in (select date_age
+from rpt_monitor_month d1 
+where d1.date BETWEEN date_sub(str_to_date('${date}', '%Y-%m-%d'), interval 29 day) AND str_to_date('${date}', '%Y-%m-%d')
+${if(len(farm_id)==0,"","and d1.farm_id='"+farm_id+"'")}
+and d1.house_id = (select house_code from s_b_batch_curr
+where operation_date =
+(select min(operation_date) from s_b_batch_curr d1
+${if(len(farm_id)==0,"","where d1.farm_id='"+farm_id+"'")})))
+${if(len(farm_id)==0,"","and ((d.farm_id='"+farm_id+"'")}
+${if(len(batch_no)==0,"","and substring_index(c.batch_id,'-',-1)=substring_index('"+batch_no+"','-',-1)))")}
 
-UNION
+union
 
 SELECT
   u.id user_id,
@@ -527,19 +422,16 @@ SELECT
   d.date_age,
   c.batch_id,
   d.batch_no,
-  (CASE WHEN ${index}=1 THEN if(ROUND(d.co2, 1)=-99,'',ROUND(d.co2, 1))
-        WHEN ${index}=2 THEN if(ROUND(d.high_alarm_co2, 1)=-99,'',ROUND(d.high_alarm_co2, 1))
-   ELSE ''
-   END) indexColumn
+  ROUND(d.inside_point_diff, 1) indexColumn
 FROM
   (select a.farm_id,
   a.house_id,
   DATE_FORMAT(a.collect_datetime,'%Y-%m-%d') as date,
   a.collect_datetime as time,
   DATE_FORMAT(a.collect_datetime,'%H:%i') as date_age,
+  a.date_age as age_date,
   a.batch_no,
-  avg(a.co2) as co2,
-  avg(a.high_alarm_co2) as high_alarm_co2
+  avg(a.point_temp_diff) as inside_point_diff
 from s_b_monitor_hist a
 where 1=1
 group by a.farm_id,
@@ -554,7 +446,7 @@ group by a.farm_id,
   LEFT JOIN s_d_farm f
     ON f.id = d.farm_id
     AND f.freeze_status=0
-  LEFT JOIN s_b_batch_change c
+   LEFT JOIN s_b_batch_change c
 ON c.farm_id = d.farm_id
 AND c.house_code = d.house_id
 AND c.operation_type = 2
@@ -573,14 +465,9 @@ ${if(searchType==1 && len(time)==5 && FIND(':',time)>0,"and 1=1"," and 1=0")}
 AND d.date = '${date}'
 and d.date_age between replace('${time}','%253A',':') and date_add(STR_TO_DATE(replace('${time}','%253A',':'),'%H:%i'), INTERVAL 30 MINUTE)
 ${if(len(farm_id)==0,"","and ((d.farm_id='"+farm_id+"'")}
-${if(len(house_id)==0,"","and d.house_id='"+house_id+"'")}
-${if(len(batch_no)==0,"","and c.batch_id='"+batch_no+"')")}
- 
-${if(len(farm2_id)==0,"","or (d.farm_id='"+farm2_id+"'")}
-${if(len(house2_id)==0,"","and d.house_id='"+house2_id+"'")}
-${if(len(batch2_no)==0,"","and c.batch_id='"+batch2_no+"'))")}
+${if(len(batch_no)==0,"","and substring_index(c.batch_id,'-',-1)=substring_index('"+batch_no+"','-',-1)))")}
 )z
-ORDER BY z.farm_id,z.house_id,z.date,z.time,z.date_age]]></Query>
+ORDER BY z.date,z.date_age]]></Query>
 </TableData>
 <TableData name="栋舍2" class="com.fr.data.impl.DBTableData">
 <Parameters>
@@ -612,7 +499,6 @@ ORDER BY z.farm_id,z.house_id,z.date,z.time,z.date_age]]></Query>
   o.name_cn,
   o.level_id,
   o.level_name,
-  o.freeze_status,
   u.id user_id,
   u.user_code,
   u.user_real_name,
@@ -620,7 +506,6 @@ ORDER BY z.farm_id,z.house_id,z.date,z.time,z.date_age]]></Query>
   f.farm_name_chs,
   h.id house_id,
   h.house_name,
-  h.house_type,
   c.batch_id,
   c.batch_no
 FROM
@@ -645,7 +530,7 @@ ${if(len(farm2_id)==0,"","and f.id='"+farm2_id+"'")}]]></Query>
 <Parameter>
 <Attributes name="user_id"/>
 <O>
-<![CDATA[1]]></O>
+<![CDATA[]]></O>
 </Parameter>
 <Parameter>
 <Attributes name="house2_id"/>
@@ -655,12 +540,12 @@ ${if(len(farm2_id)==0,"","and f.id='"+farm2_id+"'")}]]></Query>
 <Parameter>
 <Attributes name="org_id"/>
 <O>
-<![CDATA[108]]></O>
+<![CDATA[]]></O>
 </Parameter>
 <Parameter>
 <Attributes name="farm2_id"/>
 <O>
-<![CDATA[111]]></O>
+<![CDATA[]]></O>
 </Parameter>
 </Parameters>
 <Attributes maxMemRowCount="-1"/>
@@ -835,7 +720,7 @@ reportFrame.style.left = "3px";]]></Content>
 <Attr shadow="false"/>
 </AttrBackground>
 <AttrBorder>
-<Attr lineStyle="0" isRoundBorder="false" roundRadius="3"/>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
 <newColor borderColor="-6908266"/>
 </AttrBorder>
 <AttrAlpha>
@@ -843,7 +728,7 @@ reportFrame.style.left = "3px";]]></Content>
 </AttrAlpha>
 </GI>
 <O>
-<![CDATA[二氧化碳对比图]]></O>
+<![CDATA[点温差对比图]]></O>
 <TextAttr>
 <Attr alignText="0">
 <FRFont name="微软雅黑" style="1" size="128" foreground="-13421773"/>
@@ -884,37 +769,6 @@ reportFrame.style.left = "3px";]]></Content>
 <DefaultAttr class="com.fr.chart.chartglyph.ConditionAttr">
 <ConditionAttr name="">
 <AttrList>
-<Attr class="com.fr.plugin.chart.base.VanChartAttrTrendLine">
-<TrendLine>
-<Attr trendLineName="" trendLineType="exponential" prePeriod="0" afterPeriod="0"/>
-<LineStyleInfo>
-<AttrAlpha>
-<Attr alpha="1.0"/>
-</AttrAlpha>
-<AttrColor>
-<Attr/>
-</AttrColor>
-<AttrLineStyle>
-<newAttr lineStyle="0"/>
-</AttrLineStyle>
-<AttrBorder>
-<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
-<newColor borderColor="-16777216"/>
-</AttrBorder>
-</LineStyleInfo>
-</TrendLine>
-</Attr>
-<Attr class="com.fr.plugin.chart.base.VanChartAttrLine">
-<VanAttrLine>
-<Attr lineWidth="2" lineStyle="2" nullValueBreak="true"/>
-</VanAttrLine>
-</Attr>
-<Attr class="com.fr.plugin.chart.base.VanChartAttrMarker">
-<VanAttrMarker>
-<Attr isCommon="true" markerType="NullMarker" radius="4.5" width="30.0" height="30.0"/>
-<Background name="NullBackground"/>
-</VanAttrMarker>
-</Attr>
 <Attr class="com.fr.plugin.chart.base.AttrTooltip">
 <AttrTooltip>
 <Attr enable="true" followMouse="true" showMutiSeries="true" isCustom="false"/>
@@ -963,6 +817,37 @@ reportFrame.style.left = "3px";]]></Content>
 </AttrAlpha>
 </GI>
 </AttrTooltip>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.VanChartAttrTrendLine">
+<TrendLine>
+<Attr trendLineName="" trendLineType="exponential" prePeriod="0" afterPeriod="0"/>
+<LineStyleInfo>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+<AttrColor>
+<Attr/>
+</AttrColor>
+<AttrLineStyle>
+<newAttr lineStyle="0"/>
+</AttrLineStyle>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+</LineStyleInfo>
+</TrendLine>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.VanChartAttrLine">
+<VanAttrLine>
+<Attr lineWidth="2" lineStyle="2" nullValueBreak="true"/>
+</VanAttrLine>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.VanChartAttrMarker">
+<VanAttrMarker>
+<Attr isCommon="true" markerType="NullMarker" radius="12.5" width="30.0" height="30.0"/>
+<Background name="NullBackground"/>
+</VanAttrMarker>
 </Attr>
 </AttrList>
 </ConditionAttr>
@@ -1100,7 +985,7 @@ reportFrame.style.left = "3px";]]></Content>
 <![CDATA[_self]]></TargetFrame>
 <Features width="600" height="400"/>
 <ReportletName showPI="true">
-<![CDATA[/zdyj/carbonCompareReport.cpt]]></ReportletName>
+<![CDATA[zdyj/tempCompareDiffforfarm.cpt]]></ReportletName>
 </JavaScript>
 </JavaScript>
 </NameJavaScript>
@@ -1108,41 +993,41 @@ reportFrame.style.left = "3px";]]></Content>
 <newPlotFillStyle>
 <AttrFillStyle>
 <AFStyle colorStyle="1"/>
-<FillStyleName fillStyleName="新特性"/>
-<isCustomFillStyle isCustomFillStyle="false"/>
+<FillStyleName fillStyleName=""/>
+<isCustomFillStyle isCustomFillStyle="true"/>
 <ColorList>
-<OColor colvalue="-10243346"/>
-<OColor colvalue="-8988015"/>
-<OColor colvalue="-472193"/>
-<OColor colvalue="-486008"/>
-<OColor colvalue="-8595761"/>
-<OColor colvalue="-7236949"/>
-<OColor colvalue="-8873759"/>
-<OColor colvalue="-1071514"/>
-<OColor colvalue="-1188474"/>
-<OColor colvalue="-6715442"/>
-<OColor colvalue="-10243346"/>
-<OColor colvalue="-8988015"/>
-<OColor colvalue="-472193"/>
-<OColor colvalue="-486008"/>
-<OColor colvalue="-8595761"/>
-<OColor colvalue="-7236949"/>
-<OColor colvalue="-8873759"/>
-<OColor colvalue="-1071514"/>
-<OColor colvalue="-1188474"/>
-<OColor colvalue="-6715442"/>
-<OColor colvalue="-10243346"/>
-<OColor colvalue="-8988015"/>
-<OColor colvalue="-472193"/>
-<OColor colvalue="-486008"/>
-<OColor colvalue="-8595761"/>
-<OColor colvalue="-7236949"/>
-<OColor colvalue="-8873759"/>
-<OColor colvalue="-1071514"/>
-<OColor colvalue="-1188474"/>
-<OColor colvalue="-6715442"/>
-<OColor colvalue="-10243346"/>
-<OColor colvalue="-8988015"/>
+<OColor colvalue="-13261"/>
+<OColor colvalue="-39169"/>
+<OColor colvalue="-4363512"/>
+<OColor colvalue="-16750485"/>
+<OColor colvalue="-3658447"/>
+<OColor colvalue="-10331231"/>
+<OColor colvalue="-7763575"/>
+<OColor colvalue="-6514688"/>
+<OColor colvalue="-16744620"/>
+<OColor colvalue="-6187579"/>
+<OColor colvalue="-15714713"/>
+<OColor colvalue="-945550"/>
+<OColor colvalue="-4092928"/>
+<OColor colvalue="-13224394"/>
+<OColor colvalue="-12423245"/>
+<OColor colvalue="-10043521"/>
+<OColor colvalue="-406154"/>
+<OColor colvalue="-13031292"/>
+<OColor colvalue="-16732559"/>
+<OColor colvalue="-7099690"/>
+<OColor colvalue="-11991199"/>
+<OColor colvalue="-331445"/>
+<OColor colvalue="-6991099"/>
+<OColor colvalue="-16686527"/>
+<OColor colvalue="-9205567"/>
+<OColor colvalue="-7397856"/>
+<OColor colvalue="-406154"/>
+<OColor colvalue="-2712831"/>
+<OColor colvalue="-4737097"/>
+<OColor colvalue="-11460720"/>
+<OColor colvalue="-6696775"/>
+<OColor colvalue="-3685632"/>
 </ColorList>
 </AttrFillStyle>
 </newPlotFillStyle>
@@ -1192,7 +1077,7 @@ reportFrame.style.left = "3px";]]></Content>
 <ZoomAxisAttr isZoom="false"/>
 <axisReversed axisReversed="false"/>
 <VanChartAxisAttr mainTickLine="2" secTickLine="0" axisName="X轴" titleUseHtml="false" autoLabelGap="true" limitSize="false" maxHeight="15.0" commonValueFormat="true" isRotation="false"/>
-<HtmlLabel customText="" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+<HtmlLabel customText="function(){var a;     if (this == &quot;00&quot;){        a=&quot;0:00&quot;}  else  if (this ==&quot;01&quot;){          a=&quot;1:00&quot;} else if(this==&quot;02&quot;){           a=&quot;2:00&quot; }   else if(this==&quot;03&quot;){           a=&quot;3:00&quot; }  else if(this==&quot;04&quot;){           a=&quot;4:00&quot; }  else if(this==&quot;05&quot;){           a=&quot;5:00&quot; }  else if(this==&quot;06&quot;){           a=&quot;6:00&quot; }  else if(this==&quot;07&quot;){           a=&quot;7:00&quot; }  else if(this==&quot;08&quot;){           a=&quot;8:00&quot; }  else if(this==&quot;09&quot;){           a=&quot;9:00&quot; }  else if(this==&quot;10&quot;){           a=&quot;10:00&quot; }  else if(this==&quot;11&quot;){           a=&quot;11:00&quot; }  else if(this==&quot;12&quot;){           a=&quot;12:00&quot; }  else if(this==&quot;13&quot;){           a=&quot;13:00&quot; }  else if(this==&quot;14&quot;){           a=&quot;14:00&quot; }  else if(this==&quot;15&quot;){           a=&quot;15:00&quot; }  else if(this==&quot;16&quot;){           a=&quot;16:00&quot; }  else if(this==&quot;17&quot;){           a=&quot;17:00&quot; }  else if(this==&quot;18&quot;){           a=&quot;18:00&quot; }  else if(this==&quot;19&quot;){           a=&quot;19:00&quot; }  else if(this==&quot;20&quot;){           a=&quot;20:00&quot; }  else if(this==&quot;21&quot;){           a=&quot;21:00&quot; }  else if(this==&quot;22&quot;){           a=&quot;22:00&quot; }  else if(this==&quot;23&quot;){           a=&quot;23:00&quot; }        else { a=this }     return a;}" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
 <alertList/>
 <customBackgroundList/>
 </VanChartAxis>
@@ -1213,10 +1098,12 @@ reportFrame.style.left = "3px";]]></Content>
 <Attr alpha="1.0"/>
 </AttrAlpha>
 </GI>
-<O>
-<![CDATA[PPM]]></O>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[='温度(℃)']]></Attributes>
+</O>
 <TextAttr>
-<Attr alignText="0">
+<Attr rotation="-90" alignText="0">
 <FRFont name="微软雅黑" style="1" size="88" foreground="-10066330"/>
 </Attr>
 </TextAttr>
@@ -1234,8 +1121,8 @@ reportFrame.style.left = "3px";]]></Content>
 </Attr>
 </TextAttr>
 <AxisLabelCount value="=1"/>
-<AxisRange minValue="=0"/>
-<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=5" secUnit="=0"/>
+<AxisRange minValue="=0" maxValue="=8"/>
+<AxisUnit201106 isCustomMainUnit="true" isCustomSecUnit="false" mainUnit="=2" secUnit="=0"/>
 <ZoomAxisAttr isZoom="false"/>
 <axisReversed axisReversed="false"/>
 <VanChartAxisAttr mainTickLine="0" secTickLine="0" axisName="Y轴" titleUseHtml="false" autoLabelGap="true" limitSize="false" maxHeight="15.0" commonValueFormat="true" isRotation="false"/>
@@ -1347,7 +1234,7 @@ reportFrame.style.left = "3px";]]></Content>
 <FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
-<BoundsAttr x="442" y="44" width="64" height="21"/>
+<BoundsAttr x="440" y="42" width="64" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
@@ -1369,7 +1256,7 @@ reportFrame.style.left = "3px";]]></Content>
 <![CDATA[{Name:批次2,Key:batch_id}]]></databinding>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="506" y="44" width="112" height="21"/>
+<BoundsAttr x="504" y="42" width="112" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -1379,13 +1266,13 @@ reportFrame.style.left = "3px";]]></Content>
 </WidgetAttr>
 <widgetValue>
 <O>
-<![CDATA[    栋舍:]]></O>
+<![CDATA[   栋舍:]]></O>
 </widgetValue>
 <LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
 <FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
-<BoundsAttr x="244" y="44" width="60" height="21"/>
+<BoundsAttr x="242" y="42" width="60" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
@@ -1407,7 +1294,7 @@ reportFrame.style.left = "3px";]]></Content>
 <![CDATA[{Name:栋舍2,Key:house_id}]]></databinding>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="304" y="44" width="113" height="21"/>
+<BoundsAttr x="302" y="42" width="113" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -1417,13 +1304,13 @@ reportFrame.style.left = "3px";]]></Content>
 </WidgetAttr>
 <widgetValue>
 <O>
-<![CDATA[    农场:]]></O>
+<![CDATA[     农场:]]></O>
 </widgetValue>
 <LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
 <FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
-<BoundsAttr x="29" y="44" width="68" height="21"/>
+<BoundsAttr x="27" y="42" width="68" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
@@ -1445,7 +1332,7 @@ reportFrame.style.left = "3px";]]></Content>
 <![CDATA[{Name:农场,Key:farm_id}]]></databinding>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="97" y="44" width="130" height="21"/>
+<BoundsAttr x="95" y="42" width="130" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.parameter.FormSubmitButton">
@@ -1466,7 +1353,7 @@ time.reset();]]></Content>
 <Hotkeys>
 <![CDATA[enter]]></Hotkeys>
 </InnerWidget>
-<BoundsAttr x="823" y="44" width="84" height="21"/>
+<BoundsAttr x="840" y="10" width="84" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -1476,13 +1363,13 @@ time.reset();]]></Content>
 </WidgetAttr>
 <widgetValue>
 <O>
-<![CDATA[    农场:]]></O>
+<![CDATA[     农场:]]></O>
 </widgetValue>
 <LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
 <FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
-<BoundsAttr x="29" y="12" width="69" height="21"/>
+<BoundsAttr x="27" y="10" width="69" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
@@ -1506,7 +1393,7 @@ time.reset();]]></Content>
 <![CDATA[{Name:农场,Key:farm_id}]]></databinding>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="97" y="12" width="130" height="21"/>
+<BoundsAttr x="95" y="10" width="130" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -1516,13 +1403,13 @@ time.reset();]]></Content>
 </WidgetAttr>
 <widgetValue>
 <O>
-<![CDATA[    栋舍:]]></O>
+<![CDATA[   栋舍:]]></O>
 </widgetValue>
 <LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
 <FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
-<BoundsAttr x="245" y="12" width="60" height="21"/>
+<BoundsAttr x="42" y="175" width="60" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
@@ -1546,7 +1433,7 @@ time.reset();]]></Content>
 <![CDATA[{Name:栋舍,Key:house_id}]]></databinding>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="304" y="12" width="114" height="21"/>
+<BoundsAttr x="101" y="175" width="114" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -1562,7 +1449,7 @@ time.reset();]]></Content>
 <FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
-<BoundsAttr x="442" y="12" width="65" height="21"/>
+<BoundsAttr x="242" y="10" width="65" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
@@ -1586,7 +1473,7 @@ time.reset();]]></Content>
 <![CDATA[{Name:批次,Key:batch_id}]]></databinding>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="507" y="12" width="112" height="21"/>
+<BoundsAttr x="307" y="10" width="112" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -1602,7 +1489,7 @@ time.reset();]]></Content>
 <FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
-<BoundsAttr x="641" y="11" width="63" height="21"/>
+<BoundsAttr x="440" y="10" width="63" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.DateEditor">
@@ -1638,7 +1525,7 @@ if(date_age!=""){
 </O>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="704" y="11" width="100" height="21"/>
+<BoundsAttr x="503" y="10" width="100" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -1654,19 +1541,29 @@ if(date_age!=""){
 <FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
-<BoundsAttr x="640" y="44" width="66" height="21"/>
+<BoundsAttr x="637" y="42" width="66" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
 <WidgetName name="index"/>
-<WidgetAttr invisible="true" description="">
+<WidgetAttr disabled="true" invisible="true" description="">
 <PrivilegeControl/>
 </WidgetAttr>
 <allowBlank>
 <![CDATA[false]]></allowBlank>
 <Dictionary class="com.fr.data.impl.CustomDictionary">
 <CustomDictAttr>
-<Dict key="1" value="二氧化碳含量"/>
+<Dict key="1" value="前区1"/>
+<Dict key="2" value="前区2"/>
+<Dict key="3" value="中区"/>
+<Dict key="4" value="后区1"/>
+<Dict key="5" value="后区2"/>
+<Dict key="6" value="平均温度"/>
+<Dict key="7" value="目标温度"/>
+<Dict key="8" value="高报温度"/>
+<Dict key="9" value="低报温度"/>
+<Dict key="10" value="室外温度"/>
+<Dict key="11" value="湿度"/>
 </CustomDictAttr>
 </Dictionary>
 <widgetValue>
@@ -1676,7 +1573,7 @@ if(date_age!=""){
 </O>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="706" y="44" width="98" height="21"/>
+<BoundsAttr x="703" y="42" width="94" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -1722,7 +1619,7 @@ var user_id = this.options.form.getWidgetByName("user_id").getValue();
 var orgId = this.options.form.getWidgetByName("org_id").getValue();
 var date_age = this.options.form.getWidgetByName("date_age").getValue();
 
-window.location="ReportServer?reportlet=zdyj/carbonReport.cpt&user_id="+user_id+"&org_id="+orgId+"&farm_id="+farms+"&house_id="+houses+"&batch_no="+batchs+"&date="+dates+"&type="+searchType+"&date_age="+date_age;
+window.location="ReportServer?reportlet=zdyj/tempDiff.cpt&user_id="+user_id+"&org_id="+orgId+"&farm_id="+farms+"&house_id="+houses+"&batch_no="+batchs+"&date="+dates+"&type="+searchType+"&date_age="+date_age;
 ]]></Content>
 </JavaScript>
 </Listener>
@@ -1735,7 +1632,7 @@ window.location="ReportServer?reportlet=zdyj/carbonReport.cpt&user_id="+user_id+
 <Hotkeys>
 <![CDATA[enter]]></Hotkeys>
 </InnerWidget>
-<BoundsAttr x="926" y="44" width="84" height="21"/>
+<BoundsAttr x="944" y="10" width="84" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -1815,7 +1712,7 @@ window.location="ReportServer?reportlet=zdyj/carbonReport.cpt&user_id="+user_id+
 </O>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="823" y="12" width="187" height="21"/>
+<BoundsAttr x="628" y="10" width="187" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -1859,12 +1756,11 @@ window.location="ReportServer?reportlet=zdyj/carbonReport.cpt&user_id="+user_id+
 <Display display="true"/>
 <DelayDisplayContent delay="false"/>
 <Position position="0"/>
-<Design_Width design_width="1188"/>
+<Design_Width design_width="1039"/>
 <MobileWidgetList>
-<Widget widgetName="date"/>
 <Widget widgetName="farm_id"/>
-<Widget widgetName="house_id"/>
 <Widget widgetName="batch_no"/>
+<Widget widgetName="date"/>
 <Widget widgetName="searchType"/>
 <Widget widgetName="farm2_id"/>
 <Widget widgetName="house2_id"/>
@@ -1874,24 +1770,25 @@ window.location="ReportServer?reportlet=zdyj/carbonReport.cpt&user_id="+user_id+
 <Widget widgetName="org_id"/>
 <Widget widgetName="user_id"/>
 <Widget widgetName="date_age"/>
+<Widget widgetName="house_id"/>
 </MobileWidgetList>
 <WidgetNameTagMap>
 <NameTag name="date" tag="    日期:"/>
-<NameTag name="house_id" tag="    栋舍:"/>
+<NameTag name="house_id" tag="   栋舍:"/>
 <NameTag name="batch_no" tag="    批次:"/>
-<NameTag name="house2_id" tag="    栋舍:"/>
-<NameTag name="searchType" tag="   时间段:"/>
+<NameTag name="house2_id" tag="   栋舍:"/>
+<NameTag name="searchType" tag="    日期:"/>
 <NameTag name="index" tag="    指标:"/>
-<NameTag name="farm2_id" tag="    农场:"/>
+<NameTag name="farm2_id" tag="     农场:"/>
 <NameTag name="date_age" tag="日龄:"/>
 <NameTag name="batch2_no" tag="    批次:"/>
 <NameTag name="user_id" tag="user_id:"/>
 <NameTag name="org_id" tag="org_id:"/>
 <NameTag name="time" tag="time:"/>
-<NameTag name="farm_id" tag="    农场:"/>
+<NameTag name="farm_id" tag="     农场:"/>
 </WidgetNameTagMap>
 </Layout>
-<DesignAttr width="1188" height="67"/>
+<DesignAttr width="1039" height="33"/>
 </ParameterUI>
 </ReportParameterAttr>
 <StyleList/>

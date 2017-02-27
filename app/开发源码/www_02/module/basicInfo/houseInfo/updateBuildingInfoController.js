@@ -65,10 +65,6 @@
                   		"sensor_no":5,
                   		"sensor_code":"1000",
                   		"show_column":"inside_temp20"//后区2
-					},{
-                  		"sensor_no":6,
-                  		"sensor_code":"1000",
-                  		"show_column":"outside_temp"//室外
 					});
 				}else{
 					$scope.deviceData.sensorInfo = data.ResponseDetail.sensorInfo;

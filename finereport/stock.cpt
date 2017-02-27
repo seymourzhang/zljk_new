@@ -56,6 +56,7 @@ WHERE d.code_type="good_type" AND d.biz_code<>1]]></Query>
   o.name_cn,
   o.level_id,
   o.level_name,
+  o.freeze_status,
   u.id user_id,
   u.user_code,
   u.user_real_name,
@@ -63,6 +64,7 @@ WHERE d.code_type="good_type" AND d.biz_code<>1]]></Query>
   f.farm_name_chs,
   h.id house_id,
   h.house_name,
+  h.house_type,
   c.batch_id,
   c.batch_no
 FROM
@@ -71,12 +73,14 @@ LEFT JOIN v_user u
 ON o.id = u.obj_id
 LEFT JOIN s_d_farm f
 ON o.id = f.id
+AND f.freeze_status=0
 LEFT JOIN s_d_house h
 ON h.farm_id = f.id
+AND h.freeze_status=0
 LEFT JOIN s_b_batch_curr c
 ON c.farm_id = f.id
 AND c.house_code = h.house_code
-WHERE u.obj_type = 2 AND u.id = '${user_id}'
+WHERE u.obj_type = 2 AND o.freeze_status=0 AND u.id = '${user_id}'
 ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
 </TableData>
 <TableData name="库存" class="com.fr.data.impl.DBTableData">
@@ -84,12 +88,12 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
 <Parameter>
 <Attributes name="user_id"/>
 <O>
-<![CDATA[]]></O>
+<![CDATA[21]]></O>
 </Parameter>
 <Parameter>
 <Attributes name="org_id"/>
 <O>
-<![CDATA[]]></O>
+<![CDATA[165]]></O>
 </Parameter>
 </Parameters>
 <Attributes maxMemRowCount="-1"/>
@@ -100,7 +104,7 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
 <Query>
 <![CDATA[SELECT
   o.id,
-  o.organization_id,
+  o.parent_id,
   s.id sid,
   s.farm_id,
   s.farm_name,
@@ -112,10 +116,11 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
   d.code_name spec_name,
   ifnull(e.price,prc.price) as price,
   date_format(s.operation_date,"%Y-%m-%d") as odate,
-  ifnull(s.count,0) as 库存量,
+  ifnull(sum(s.count),0) as 库存量,
   ifnull(sum(e.count),0) as 入库量,
   ifnull(ABS(sum(j.count)),0) as 出库量,
-  (ifnull(s.count,0)+ifnull(ABS(sum(j.count)),0)-ifnull(sum(e.count),0)) as 期初值,
+  ifnull(sum(k.count),0) as 本月调整量,
+  (ifnull(sum(s.count),0)+ifnull(ABS(sum(j.count)),0)-ifnull(sum(e.count),0)-ifnull(sum(k.count),0)) as 期初值,
   s.corporation_id,
   g.corporation,
   s.factory_id,
@@ -138,13 +143,18 @@ LEFT JOIN s_d_corporation g
 ON s.corporation_id = g.corporation_id
 LEFT JOIN s_d_farm h
 ON h.id = s.farm_id 
+AND h.freeze_status=0
 LEFT JOIN s_d_organization o
-ON o.organization_id = s.farm_id AND o.level_id = h.farm_code
+ON o.organization_id = s.farm_id
+AND o.freeze_status=0
 LEFT JOIN v_user u
 ON o.id = u.obj_id
 LEFT JOIN s_d_stock_change j
 ON s.id = j.stock_id AND j.operation_kind = 1 AND DATE_FORMAT(j.operation_date,"%Y-%m-%d") = DATE_FORMAT(s.operation_date,"%Y-%m-%d")
 and j.approve_status = 2
+LEFT JOIN s_d_stock_change k
+ON s.id = k.stock_id AND k.operation_kind = 3 AND DATE_FORMAT(k.operation_date,"%Y-%m-%d") = DATE_FORMAT(s.operation_date,"%Y-%m-%d")
+and k.approve_status = 2
 LEFT JOIN s_b_corporation_good prc
 on s.good_id = prc.good_id
 and case 
@@ -154,7 +164,7 @@ end
 WHERE u.id='${user_id}'
 ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}
 GROUP BY 
-    s.id]]></Query>
+    s.good_id]]></Query>
 </TableData>
 <TableData name="期初值" class="com.fr.data.impl.DBTableData">
 <Parameters/>
@@ -178,6 +188,15 @@ where date_add(date_add(last_day(s.operation_date),interval 1 day),interval -1 m
 <ReportWebAttr>
 <ServerPrinter/>
 <WebPageContent>
+<Listener event="afterload">
+<JavaScript class="com.fr.js.JavaScriptImpl">
+<Parameters/>
+<Content>
+<![CDATA[var reportFrame = document.getElementById('content-container'); 
+reportFrame.style.backgroundColor = "#ffffff";
+reportFrame.style.left = "3px";]]></Content>
+</JavaScript>
+</Listener>
 <ToolBars>
 <ToolBarManager>
 <Location>
@@ -268,7 +287,7 @@ where date_add(date_add(last_day(s.operation_date),interval 1 day),interval -1 m
 <RowHeight defaultValue="723900">
 <![CDATA[1447800,1447800,723900,723900,723900,723900,723900,723900,723900,723900,723900,723900,723900,685800,0,723900]]></RowHeight>
 <ColumnWidth defaultValue="2743200">
-<![CDATA[4914900,9906000,5067300,3543300,4343400,6781800,7391400,4838700,4038600,4076700,3619500,4533900,2743200]]></ColumnWidth>
+<![CDATA[4914900,9906000,5067300,3543300,4343400,6781800,7391400,4838700,4038600,4076700,4076700,3619500,4533900,2743200]]></ColumnWidth>
 <CellElementList>
 <C c="0" r="0" s="0">
 <O>
@@ -280,6 +299,31 @@ where date_add(date_add(last_day(s.operation_date),interval 1 day),interval -1 m
 <O>
 <![CDATA[品名]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[B2]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-CODE(B2)]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="2" r="0" s="0">
@@ -292,54 +336,310 @@ where date_add(date_add(last_day(s.operation_date),interval 1 day),interval -1 m
 <O>
 <![CDATA[单价]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[D2]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-D2]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="4" r="0" s="0">
 <O>
 <![CDATA[入库数量]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[E2]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-E2]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="5" r="0" s="0">
 <O>
 <![CDATA[供应方]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[F2]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-CODE(F2)]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="6" r="0" s="0">
 <O>
 <![CDATA[厂家]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[G2]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-CODE(G2)]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="7" r="0" s="0">
 <O>
 <![CDATA[期初值]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[H2]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-H2]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="8" r="0" s="0">
 <O>
 <![CDATA[本月入库]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[I2]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-I2]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="9" r="0" s="0">
 <O>
 <![CDATA[本月耗用]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[J2]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-J2]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="10" r="0" s="0">
 <O>
-<![CDATA[期末库存]]></O>
+<![CDATA[本月调整]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[K2]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-K2]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="11" r="0" s="0">
 <O>
+<![CDATA[期末库存]]></O>
+<PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[L2]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-L2]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
+<Expand/>
+</C>
+<C c="12" r="0" s="0">
+<O>
 <![CDATA[总额]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[M2]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-M2]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="0" r="1" s="1">
@@ -348,6 +648,8 @@ where date_add(date_add(last_day(s.operation_date),interval 1 day),interval -1 m
 <Condition class="com.fr.data.condition.ListCondition">
 <JoinCondition join="0">
 <Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
 <CNAME>
 <![CDATA[operation_date_year]]></CNAME>
 <Compare op="0">
@@ -388,6 +690,8 @@ where date_add(date_add(last_day(s.operation_date),interval 1 day),interval -1 m
 </JoinCondition>
 <JoinCondition join="0">
 <Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
 <CNAME>
 <![CDATA[farm_id]]></CNAME>
 <Compare op="0">
@@ -406,7 +710,10 @@ where date_add(date_add(last_day(s.operation_date),interval 1 day),interval -1 m
 <Parameters/>
 </O>
 <PrivilegeControl/>
-<Expand dir="0"/>
+<Expand dir="0" order="1">
+<SortFormula>
+<![CDATA[=if($a==1,eval($asc),eval($desc))]]></SortFormula>
+</Expand>
 </C>
 <C c="1" r="1" s="1">
 <O t="DSColumn">
@@ -538,7 +845,7 @@ where date_add(date_add(last_day(s.operation_date),interval 1 day),interval -1 m
 <![CDATA[条件属性1]]></Name>
 <Condition class="com.fr.data.condition.FormulaCondition">
 <Formula>
-<![CDATA[len($$$)==0]]></Formula>
+<![CDATA[len($$$) = 0]]></Formula>
 </Condition>
 <HighlightAction class="com.fr.report.cell.cellattr.highlight.ValueHighlightAction">
 <O>
@@ -598,6 +905,30 @@ where date_add(date_add(last_day(s.operation_date),interval 1 day),interval -1 m
 </C>
 <C c="10" r="1" s="3">
 <O t="DSColumn">
+<Attributes dsName="库存" columnName="本月调整量"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[条件属性1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[len($$$) = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.ValueHighlightAction">
+<O>
+<![CDATA[-]]></O>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="11" r="1" s="3">
+<O t="DSColumn">
 <Attributes dsName="库存" columnName="库存量"/>
 <Complex/>
 <RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
@@ -620,10 +951,10 @@ where date_add(date_add(last_day(s.operation_date),interval 1 day),interval -1 m
 </HighlightList>
 <Expand dir="0"/>
 </C>
-<C c="11" r="1" s="1">
+<C c="12" r="1" s="2">
 <O t="Formula" class="Formula">
 <Attributes>
-<![CDATA[=D2 * K2]]></Attributes>
+<![CDATA[=D2 * L2]]></Attributes>
 </O>
 <PrivilegeControl/>
 <Expand/>
@@ -686,7 +1017,7 @@ where date_add(date_add(last_day(s.operation_date),interval 1 day),interval -1 m
 <![CDATA[年度:]]></O>
 </widgetValue>
 <LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
-<FRFont name="SimSun" style="0" size="72"/>
+<FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
 <BoundsAttr x="53" y="7" width="64" height="21"/>
@@ -739,7 +1070,7 @@ where date_add(date_add(last_day(s.operation_date),interval 1 day),interval -1 m
 <![CDATA[月份:]]></O>
 </widgetValue>
 <LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
-<FRFont name="SimSun" style="0" size="72"/>
+<FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
 <BoundsAttr x="246" y="7" width="62" height="21"/>
@@ -786,7 +1117,7 @@ where date_add(date_add(last_day(s.operation_date),interval 1 day),interval -1 m
 <![CDATA[类别:]]></O>
 </widgetValue>
 <LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
-<FRFont name="SimSun" style="0" size="72"/>
+<FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
 <BoundsAttr x="446" y="7" width="65" height="21"/>
@@ -808,7 +1139,7 @@ where date_add(date_add(last_day(s.operation_date),interval 1 day),interval -1 m
 </Dictionary>
 <widgetValue>
 <databinding>
-<![CDATA[{Name:类别,Key:code_name}]]></databinding>
+<![CDATA[{Name:类别,Key:biz_code}]]></databinding>
 </widgetValue>
 </InnerWidget>
 <BoundsAttr x="511" y="7" width="119" height="21"/>
@@ -824,7 +1155,7 @@ where date_add(date_add(last_day(s.operation_date),interval 1 day),interval -1 m
 <![CDATA[农场:]]></O>
 </widgetValue>
 <LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
-<FRFont name="SimSun" style="0" size="72"/>
+<FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
 <BoundsAttr x="655" y="7" width="65" height="21"/>
@@ -838,7 +1169,7 @@ where date_add(date_add(last_day(s.operation_date),interval 1 day),interval -1 m
 <DirectEdit>
 <![CDATA[false]]></DirectEdit>
 <Dictionary class="com.fr.data.impl.TableDataDictionary">
-<FormulaDictAttr kiName="organization_id" viName="name_cn"/>
+<FormulaDictAttr kiName="farm_id" viName="farm_name_chs"/>
 <TableDataDictAttr>
 <TableData class="com.fr.data.impl.NameTableData">
 <Name>
@@ -848,7 +1179,7 @@ where date_add(date_add(last_day(s.operation_date),interval 1 day),interval -1 m
 </Dictionary>
 <widgetValue>
 <databinding>
-<![CDATA[{Name:农场,Key:name_cn}]]></databinding>
+<![CDATA[{Name:农场,Key:farm_id}]]></databinding>
 </widgetValue>
 </InnerWidget>
 <BoundsAttr x="720" y="7" width="136" height="21"/>
@@ -917,7 +1248,7 @@ where date_add(date_add(last_day(s.operation_date),interval 1 day),interval -1 m
 </Style>
 <Style horizontal_alignment="0" imageLayout="1">
 <Format class="com.fr.base.CoreDecimalFormat">
-<![CDATA[#0.##]]></Format>
+<![CDATA[#0.00 (元)]]></Format>
 <FRFont name="微软雅黑" style="0" size="72"/>
 <Background name="NullBackground"/>
 <Border>

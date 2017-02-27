@@ -13,7 +13,7 @@ var CONFIG_Production_API_Host = '';
 // 测试服务器地址
 var CONFIG_Development_API_Host = 'http://121.196.237.126:8080/zdyj/';
 // 本地服务器地址
-var CONFIG_Local_API_Host = 'http://192.168.10.148:8080/zdyj/';
+var CONFIG_Local_API_Host = 'http://192.168.10.66:8080/zdyj/';
 
 
 // APK名称前缀

@@ -269,7 +269,7 @@
 				}
 
 	    	  	//判断权限
-	    		if ($scope.sparraw_user_temp.Authority.AlarmSet == "all") {
+	    		if ($scope.sparraw_user_temp.Authority.LogOn == "all") {
 	    			$scope.closeFarmList();
 	    	  		$state.go("home");
 				}else{

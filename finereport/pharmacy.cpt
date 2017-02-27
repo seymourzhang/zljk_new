@@ -33,6 +33,7 @@
   d.drug_name,
   d.main_constitute,
   DATE_FORMAT(h.exp,'%Y-%m-%d') as exp,
+  round(d.use_unit,0) as use_num,
   concat(round(d.use_unit,0),'(',(select c.code_name from s_d_code c where c.code_type = 'unit' and c.biz_code = h.unit),')') as use_unit,
   j.code_name Instruction,
   l.code_name jiliang,
@@ -40,6 +41,19 @@
   d.use_type,
   k.user_real_name
 FROM s_b_breed_detail b
+INNER JOIN (select a.farm_id,a.house_code,a.batch_id,min(a.grow_age) as grow_age,min(a.operation_date) as b_date,if(max(b.operation_date) is null,sysdate(),max(b.operation_date)) as e_date from s_b_batch_change a
+  LEFT JOIN s_b_batch_change b
+  on a.batch_id = b.batch_id
+  and a.farm_id = b.farm_id
+  and a.house_code = b.house_code
+  and a.operation_type = 2
+  and b.operation_type = 1
+  group by a.farm_id,a.house_code,a.batch_id
+  ) c
+  ON c.farm_id = b.farm_id
+  AND c.house_code = b.house_code
+  and  c.batch_id  =  b.batch_id
+  AND b.growth_date between c.b_date and c.e_date
 LEFT JOIN s_b_use_drug d
 ON d.farm_id = b.farm_id 
 AND B.house_code = D.house_id
@@ -47,8 +61,10 @@ AND DATE_FORMAT(b.growth_date,'%Y-%m-%d') =  DATE_FORMAT(d.use_date,'%Y-%m-%d')
 and d.good_type=3
 LEFT JOIN s_d_farm f
 ON b.farm_id = f.id
+AND f.freeze_status=0
 LEFT JOIN s_d_organization o
 ON o.organization_id = f.id AND o.level_id = (SELECT MAX(level_id)-1 max_level FROM s_d_organization)
+AND o.freeze_status=0
 LEFT JOIN v_user u
 ON o.id = u.obj_id
 LEFT JOIN s_d_stock_change h
@@ -93,6 +109,7 @@ order by b.growth_date]]></Query>
   o.name_cn,
   o.level_id,
   o.level_name,
+  o.freeze_status,
   u.id user_id,
   u.user_code,
   u.user_real_name,
@@ -100,6 +117,7 @@ order by b.growth_date]]></Query>
   f.farm_name_chs,
   h.id house_id,
   h.house_name,
+  h.house_type,
   c.batch_id,
   c.batch_no
 FROM
@@ -108,12 +126,14 @@ LEFT JOIN v_user u
 ON o.id = u.obj_id
 LEFT JOIN s_d_farm f
 ON o.id = f.id
+AND f.freeze_status=0
 LEFT JOIN s_d_house h
 ON h.farm_id = f.id
+AND h.freeze_status=0
 LEFT JOIN s_b_batch_curr c
 ON c.farm_id = f.id
 AND c.house_code = h.house_code
-WHERE u.obj_type = 2 AND u.id = '${user_id}'
+WHERE u.obj_type = 2 AND o.freeze_status=0 AND u.id = '${user_id}'
 ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}
 ${if(len(farm_id)==0,"","and f.id='"+farm_id+"'")}]]></Query>
 </TableData>
@@ -142,6 +162,7 @@ ${if(len(farm_id)==0,"","and f.id='"+farm_id+"'")}]]></Query>
   o.name_cn,
   o.level_id,
   o.level_name,
+  o.freeze_status,
   u.id user_id,
   u.user_code,
   u.user_real_name,
@@ -149,6 +170,7 @@ ${if(len(farm_id)==0,"","and f.id='"+farm_id+"'")}]]></Query>
   f.farm_name_chs,
   h.id house_id,
   h.house_name,
+  h.house_type,
   c.batch_id,
   c.batch_no
 FROM
@@ -157,18 +179,75 @@ LEFT JOIN v_user u
 ON o.id = u.obj_id
 LEFT JOIN s_d_farm f
 ON o.id = f.id
+AND f.freeze_status=0
 LEFT JOIN s_d_house h
 ON h.farm_id = f.id
+AND h.freeze_status=0
 LEFT JOIN s_b_batch_curr c
 ON c.farm_id = f.id
 AND c.house_code = h.house_code
-WHERE u.obj_type = 2 AND u.id = '${user_id}'
+WHERE u.obj_type = 2 AND o.freeze_status=0 AND u.id = '${user_id}'
 ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
+</TableData>
+<TableData name="公司" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="user_id"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[zdyj]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT
+  o.id org_id,
+  o.parent_id,
+  o.name_cn,
+  o.level_id,
+  o.level_name,
+  o.freeze_status,
+  u.id user_id,
+  u.user_code,
+  u.user_real_name,
+  f.id farm_id,
+  f.farm_name_chs,
+  h.id house_id,
+  h.house_name,
+  h.house_type,
+  c.batch_id,
+  c.batch_no
+FROM
+	s_d_organization o
+LEFT JOIN v_user u
+ON o.id = u.obj_id
+LEFT JOIN s_d_farm f
+ON o.id = f.id
+AND f.freeze_status=0
+LEFT JOIN s_d_house h
+ON h.farm_id = f.id
+AND h.freeze_status=0
+LEFT JOIN s_b_batch_curr c
+ON c.farm_id = f.id
+AND c.house_code = h.house_code
+WHERE u.obj_type = 2 AND o.level_id = 1  AND o.freeze_status=0 AND u.id = '${user_id}']]></Query>
 </TableData>
 </TableDataMap>
 <ReportWebAttr>
 <ServerPrinter/>
 <WebPageContent>
+<Listener event="afterload">
+<JavaScript class="com.fr.js.JavaScriptImpl">
+<Parameters/>
+<Content>
+<![CDATA[var reportFrame = document.getElementById('content-container'); 
+reportFrame.style.backgroundColor = "#ffffff";
+reportFrame.style.left = "3px";]]></Content>
+</JavaScript>
+</Listener>
 <ToolBars>
 <ToolBarManager>
 <Location>
@@ -259,24 +338,99 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
 <RowHeight defaultValue="723900">
 <![CDATA[1295400,1219200,1447800,723900,723900,723900,723900,723900,723900,723900,723900]]></RowHeight>
 <ColumnWidth defaultValue="2743200">
-<![CDATA[5410200,4991100,5295900,6134100,5753100,0,5372100,4914900,4876800,5067300,5029200,2743200]]></ColumnWidth>
+<![CDATA[5410200,4991100,5295900,6134100,5753100,0,0,0,4876800,5067300,5029200,2743200]]></ColumnWidth>
 <CellElementList>
 <C c="0" r="0" rs="2" s="0">
 <O>
 <![CDATA[日期]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[tointeger(replace(A3,\"-\",\"\"))]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-tointeger(replace(A3,\"-\",\"\"))]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="1" r="0" rs="2" s="0">
 <O>
 <![CDATA[生长周龄]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[C3]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-C3]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="2" r="0" rs="2" s="0">
 <O>
 <![CDATA[日龄]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[C3]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-C3]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="3" r="0" cs="8" s="0">
@@ -289,12 +443,62 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
 <O>
 <![CDATA[药物商品名称]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[D3]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-CODE(D3)]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="4" r="1" s="0">
 <O>
 <![CDATA[药物主要成分]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[E3]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-CODE(E3)]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="5" r="1" s="0">
@@ -319,18 +523,93 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
 <O>
 <![CDATA[药物数量]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[I3]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-I3]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="9" r="1" s="0">
 <O>
 <![CDATA[用途]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[J3]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-CODE(J3)]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="10" r="1" s="0">
 <O>
 <![CDATA[负责人]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[K3]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-CODE(K3)]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="0" r="2" s="1">
@@ -339,24 +618,28 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
 <Condition class="com.fr.data.condition.ListCondition">
 <JoinCondition join="0">
 <Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
 <CNAME>
 <![CDATA[farm_id]]></CNAME>
 <Compare op="0">
 <O t="Formula" class="Formula">
 <Attributes>
-<![CDATA[=if(len($farm_id)=0,nofilter,$farm_id)]]></Attributes>
+<![CDATA[=if(len($farm_id) = 0, nofilter, $farm_id)]]></Attributes>
 </O>
 </Compare>
 </Condition>
 </JoinCondition>
 <JoinCondition join="0">
 <Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
 <CNAME>
 <![CDATA[house_code]]></CNAME>
 <Compare op="0">
 <O t="Formula" class="Formula">
 <Attributes>
-<![CDATA[=if(len($house_id)=0,nofilter,$house_id)]]></Attributes>
+<![CDATA[=if(len($house_id) = 0, nofilter, $house_id)]]></Attributes>
 </O>
 </Compare>
 </Condition>
@@ -370,18 +653,23 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
 <Compare op="0">
 <O t="Formula" class="Formula">
 <Attributes>
-<![CDATA[=if(len($date)=0,nofilter,$date)]]></Attributes>
+<![CDATA[=if(len($date) = 0, nofilter, $date)]]></Attributes>
 </O>
 </Compare>
 </Condition>
 </JoinCondition>
 </Condition>
 <Complex/>
-<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
 <Parameters/>
 </O>
 <PrivilegeControl/>
-<Expand dir="0"/>
+<Expand dir="0" order="2">
+<SortFormula>
+<![CDATA[=if($a==1,eval($asc),eval($desc))]]></SortFormula>
+</Expand>
 </C>
 <C c="1" r="2" s="1">
 <O t="DSColumn">
@@ -455,7 +743,7 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
 </C>
 <C c="8" r="2" s="2">
 <O t="DSColumn">
-<Attributes dsName="用药" columnName="use_unit"/>
+<Attributes dsName="用药" columnName="use_num"/>
 <Complex/>
 <RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
 <Parameters/>
@@ -538,13 +826,13 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
 </WidgetAttr>
 <widgetValue>
 <O>
-<![CDATA[农场:]]></O>
+<![CDATA[    农场:]]></O>
 </widgetValue>
 <LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
-<FRFont name="SimSun" style="0" size="72"/>
+<FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
-<BoundsAttr x="50" y="11" width="61" height="21"/>
+<BoundsAttr x="25" y="8" width="67" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
@@ -566,7 +854,7 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
 <![CDATA[{Name:农场,Key:farm_id}]]></databinding>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="111" y="11" width="127" height="21"/>
+<BoundsAttr x="92" y="8" width="140" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.parameter.FormSubmitButton">
@@ -579,7 +867,7 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
 <Hotkeys>
 <![CDATA[enter]]></Hotkeys>
 </InnerWidget>
-<BoundsAttr x="705" y="11" width="80" height="21"/>
+<BoundsAttr x="670" y="8" width="80" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -589,13 +877,13 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
 </WidgetAttr>
 <widgetValue>
 <O>
-<![CDATA[栋舍:]]></O>
+<![CDATA[    栋舍:]]></O>
 </widgetValue>
 <LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
-<FRFont name="SimSun" style="0" size="72"/>
+<FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
-<BoundsAttr x="260" y="11" width="66" height="21"/>
+<BoundsAttr x="250" y="8" width="63" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
@@ -617,7 +905,7 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
 <![CDATA[{Name:栋舍,Key:house_id}]]></databinding>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="326" y="11" width="125" height="21"/>
+<BoundsAttr x="313" y="8" width="121" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -627,13 +915,13 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
 </WidgetAttr>
 <widgetValue>
 <O>
-<![CDATA[日期:]]></O>
+<![CDATA[    日期:]]></O>
 </widgetValue>
 <LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
-<FRFont name="SimSun" style="0" size="72"/>
+<FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
-<BoundsAttr x="474" y="11" width="54" height="21"/>
+<BoundsAttr x="453" y="8" width="62" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.DateEditor">
@@ -649,7 +937,65 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
 </O>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="528" y="11" width="125" height="21"/>
+<BoundsAttr x="515" y="8" width="119" height="21"/>
+</Widget>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.ui.Label">
+<WidgetName name="Labeluser_id"/>
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<widgetValue>
+<O>
+<![CDATA[user_id:]]></O>
+</widgetValue>
+<LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
+<FRFont name="SimSun" style="0" size="72"/>
+<border style="0" color="-723724"/>
+</InnerWidget>
+<BoundsAttr x="54" y="53" width="52" height="21"/>
+</Widget>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.ui.ComboBox">
+<WidgetName name="user_id"/>
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<widgetValue>
+<O>
+<![CDATA[]]></O>
+</widgetValue>
+</InnerWidget>
+<BoundsAttr x="106" y="53" width="139" height="21"/>
+</Widget>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.ui.Label">
+<WidgetName name="Labelorg_id"/>
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<widgetValue>
+<O>
+<![CDATA[org_id:]]></O>
+</widgetValue>
+<LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
+<FRFont name="SimSun" style="0" size="72"/>
+<border style="0" color="-723724"/>
+</InnerWidget>
+<BoundsAttr x="268" y="53" width="52" height="21"/>
+</Widget>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.ui.ComboBox">
+<WidgetName name="org_id"/>
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<widgetValue>
+<databinding>
+<![CDATA[{Name:公司,Key:org_id}]]></databinding>
+</widgetValue>
+</InnerWidget>
+<BoundsAttr x="320" y="53" width="139" height="21"/>
 </Widget>
 <Sorted sorted="false"/>
 <Display display="true"/>
@@ -660,14 +1006,18 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
 <Widget widgetName="farm_id"/>
 <Widget widgetName="house_id"/>
 <Widget widgetName="date"/>
+<Widget widgetName="user_id"/>
+<Widget widgetName="org_id"/>
 </MobileWidgetList>
 <WidgetNameTagMap>
-<NameTag name="date" tag="日期:"/>
-<NameTag name="house_id" tag="栋舍:"/>
-<NameTag name="farm_id" tag="农场:"/>
+<NameTag name="date" tag="    日期:"/>
+<NameTag name="house_id" tag="    栋舍:"/>
+<NameTag name="user_id" tag="user_id:"/>
+<NameTag name="org_id" tag="org_id:"/>
+<NameTag name="farm_id" tag="    农场:"/>
 </WidgetNameTagMap>
 </Layout>
-<DesignAttr width="960" height="37"/>
+<DesignAttr width="960" height="31"/>
 </ParameterUI>
 <Parameter>
 <Attributes name="farm_id"/>

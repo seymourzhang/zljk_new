@@ -46,9 +46,11 @@ LEFT JOIN s_d_code c1 ON c1.biz_code = c.spec
 AND c1.code_type = "spec"
 LEFT JOIN s_d_farm n
 ON n.id = c.farm_id
+AND n.freeze_status=0
 LEFT JOIN s_d_organization o
 ON o.organization_id = n.id
 AND o.level_id = (SELECT MAX(level_id)-1 max_level FROM s_d_organization)
+AND o.freeze_status=0
 LEFT JOIN v_user u
 ON o.id = u.obj_id
 WHERE u.id = '${user_id}'
@@ -96,6 +98,7 @@ WHERE d.code_type="good_type" AND d.biz_code<>1]]></Query>
   o.name_cn,
   o.level_id,
   o.level_name,
+  o.freeze_status,
   u.id user_id,
   u.user_code,
   u.user_real_name,
@@ -103,6 +106,7 @@ WHERE d.code_type="good_type" AND d.biz_code<>1]]></Query>
   f.farm_name_chs,
   h.id house_id,
   h.house_name,
+  h.house_type,
   c.batch_id,
   c.batch_no
 FROM
@@ -111,12 +115,14 @@ LEFT JOIN v_user u
 ON o.id = u.obj_id
 LEFT JOIN s_d_farm f
 ON o.id = f.id
+AND f.freeze_status=0
 LEFT JOIN s_d_house h
 ON h.farm_id = f.id
+AND h.freeze_status=0
 LEFT JOIN s_b_batch_curr c
 ON c.farm_id = f.id
 AND c.house_code = h.house_code
-WHERE u.obj_type = 2 AND u.id = '${user_id}'
+WHERE u.obj_type = 2 AND o.freeze_status=0 AND u.id = '${user_id}'
 ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
 </TableData>
 <TableData name="公司" class="com.fr.data.impl.DBTableData">
@@ -139,6 +145,7 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
   o.name_cn,
   o.level_id,
   o.level_name,
+  o.freeze_status,
   u.id user_id,
   u.user_code,
   u.user_real_name,
@@ -146,6 +153,7 @@ ${if(len(org_id)==0,"","and o.parent_id='"+org_id+"'")}]]></Query>
   f.farm_name_chs,
   h.id house_id,
   h.house_name,
+  h.house_type,
   c.batch_id,
   c.batch_no
 FROM
@@ -154,17 +162,28 @@ LEFT JOIN v_user u
 ON o.id = u.obj_id
 LEFT JOIN s_d_farm f
 ON o.id = f.id
+AND f.freeze_status=0
 LEFT JOIN s_d_house h
 ON h.farm_id = f.id
+AND h.freeze_status=0
 LEFT JOIN s_b_batch_curr c
 ON c.farm_id = f.id
 AND c.house_code = h.house_code
-WHERE u.obj_type = 2 AND o.level_id = 1  AND u.id = '${user_id}']]></Query>
+WHERE u.obj_type = 2 AND o.level_id = 1  AND o.freeze_status=0 AND u.id = '${user_id}']]></Query>
 </TableData>
 </TableDataMap>
 <ReportWebAttr>
 <ServerPrinter/>
 <WebPageContent>
+<Listener event="afterload">
+<JavaScript class="com.fr.js.JavaScriptImpl">
+<Parameters/>
+<Content>
+<![CDATA[var reportFrame = document.getElementById('content-container'); 
+reportFrame.style.backgroundColor = "#ffffff";
+reportFrame.style.left = "3px";]]></Content>
+</JavaScript>
+</Listener>
 <ToolBars>
 <ToolBarManager>
 <Location>
@@ -267,6 +286,31 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND u.id = '${user_id}']]></Query>
 <O>
 <![CDATA[品名]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[B2]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-CODE(B2)]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="2" r="0" s="0">
@@ -279,30 +323,155 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND u.id = '${user_id}']]></Query>
 <O>
 <![CDATA[单价]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[D2]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-D2]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="4" r="0" s="0">
 <O>
 <![CDATA[入库数量]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[E2]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-E2]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="5" r="0" s="0">
 <O>
 <![CDATA[供应方]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[F2]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-CODE(F2)]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="6" r="0" s="0">
 <O>
 <![CDATA[厂家]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[G2]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-CODE(G2)]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="7" r="0" s="0">
 <O>
 <![CDATA[总额]]></O>
 <PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="动态参数1">
+<JavaScript class="com.fr.js.ParameterJavaScript">
+<Parameters>
+<Parameter>
+<Attributes name="a"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if($a==1,0,1)]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="asc"/>
+<O>
+<![CDATA[H2]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="desc"/>
+<O>
+<![CDATA[-H2]]></O>
+</Parameter>
+</Parameters>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
 <Expand/>
 </C>
 <C c="0" r="1" s="1">
@@ -311,6 +480,8 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND u.id = '${user_id}']]></Query>
 <Condition class="com.fr.data.condition.ListCondition">
 <JoinCondition join="0">
 <Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
 <CNAME>
 <![CDATA[good_type]]></CNAME>
 <Compare op="0">
@@ -387,7 +558,10 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND u.id = '${user_id}']]></Query>
 <Parameters/>
 </O>
 <PrivilegeControl/>
-<Expand dir="0"/>
+<Expand dir="0" order="1">
+<SortFormula>
+<![CDATA[=if($a==1,eval($asc),eval($desc))]]></SortFormula>
+</Expand>
 </C>
 <C c="1" r="1" s="1">
 <O t="DSColumn">
@@ -412,8 +586,11 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND u.id = '${user_id}']]></Query>
 <C c="3" r="1" s="2">
 <O t="DSColumn">
 <Attributes dsName="入库" columnName="price"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
 <Complex/>
 <RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
 <Parameters/>
 </O>
 <PrivilegeControl/>
@@ -540,13 +717,13 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND u.id = '${user_id}']]></Query>
 </WidgetAttr>
 <widgetValue>
 <O>
-<![CDATA[年度:]]></O>
+<![CDATA[    年度:]]></O>
 </widgetValue>
 <LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
-<FRFont name="SimSun" style="0" size="72"/>
+<FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
-<BoundsAttr x="18" y="9" width="80" height="21"/>
+<BoundsAttr x="25" y="8" width="67" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
@@ -570,7 +747,7 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND u.id = '${user_id}']]></Query>
 </O>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="98" y="9" width="98" height="21"/>
+<BoundsAttr x="92" y="8" width="140" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.parameter.FormSubmitButton">
@@ -583,7 +760,7 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND u.id = '${user_id}']]></Query>
 <Hotkeys>
 <![CDATA[enter]]></Hotkeys>
 </InnerWidget>
-<BoundsAttr x="956" y="9" width="80" height="21"/>
+<BoundsAttr x="854" y="8" width="80" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -593,13 +770,13 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND u.id = '${user_id}']]></Query>
 </WidgetAttr>
 <widgetValue>
 <O>
-<![CDATA[月份:]]></O>
+<![CDATA[    月份:]]></O>
 </widgetValue>
 <LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
-<FRFont name="SimSun" style="0" size="72"/>
+<FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
-<BoundsAttr x="238" y="9" width="80" height="21"/>
+<BoundsAttr x="250" y="8" width="63" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -609,13 +786,13 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND u.id = '${user_id}']]></Query>
 </WidgetAttr>
 <widgetValue>
 <O>
-<![CDATA[类别:]]></O>
+<![CDATA[    类别:]]></O>
 </widgetValue>
 <LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
-<FRFont name="SimSun" style="0" size="72"/>
+<FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
-<BoundsAttr x="457" y="9" width="80" height="21"/>
+<BoundsAttr x="453" y="8" width="62" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
@@ -637,7 +814,7 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND u.id = '${user_id}']]></Query>
 <![CDATA[{Name:类型,Key:code_name}]]></databinding>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="537" y="9" width="133" height="21"/>
+<BoundsAttr x="515" y="8" width="119" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
@@ -668,7 +845,7 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND u.id = '${user_id}']]></Query>
 </O>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="318" y="9" width="99" height="21"/>
+<BoundsAttr x="313" y="8" width="121" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -678,13 +855,13 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND u.id = '${user_id}']]></Query>
 </WidgetAttr>
 <widgetValue>
 <O>
-<![CDATA[农场:]]></O>
+<![CDATA[    农场:]]></O>
 </widgetValue>
 <LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
-<FRFont name="SimSun" style="0" size="72"/>
+<FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
-<BoundsAttr x="706" y="9" width="80" height="21"/>
+<BoundsAttr x="652" y="8" width="58" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
@@ -706,7 +883,7 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND u.id = '${user_id}']]></Query>
 <![CDATA[{Name:农场,Key:farm_name_chs}]]></databinding>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="786" y="9" width="133" height="21"/>
+<BoundsAttr x="710" y="8" width="119" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -759,11 +936,11 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND u.id = '${user_id}']]></Query>
 <Widget widgetName="org_id"/>
 </MobileWidgetList>
 <WidgetNameTagMap>
-<NameTag name="month" tag="月份:"/>
-<NameTag name="year" tag="年度:"/>
+<NameTag name="month" tag="    月份:"/>
+<NameTag name="year" tag="    年度:"/>
 <NameTag name="org_id" tag="org_id:"/>
-<NameTag name="type" tag="类别:"/>
-<NameTag name="farm_id" tag="农场:"/>
+<NameTag name="type" tag="    类别:"/>
+<NameTag name="farm_id" tag="    农场:"/>
 </WidgetNameTagMap>
 </Layout>
 <DesignAttr width="1042" height="34"/>
@@ -817,7 +994,7 @@ WHERE u.obj_type = 2 AND o.level_id = 1  AND u.id = '${user_id}']]></Query>
 </Style>
 <Style horizontal_alignment="0" imageLayout="1">
 <Format class="com.fr.base.CoreDecimalFormat">
-<![CDATA[#0.##]]></Format>
+<![CDATA[#0.00 (元)]]></Format>
 <FRFont name="微软雅黑" style="0" size="72"/>
 <Background name="NullBackground"/>
 <Border>

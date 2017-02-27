@@ -149,6 +149,26 @@
 			return app_alert("该栋舍已出栏，无法保存。");
 		}
 
+
+
+
+		//判断是否能保存
+		var selectedDate = $scope.dailyReportData.selectDayAge;
+		var toDay = new Date().Format("yyyy-MM-dd");
+		var dateArr = [selectedDate,toDay];
+		//判断日期大小
+		var minDate = dateArr[0];
+    	for (var i = 0; i < dateArr.length; i++) {
+    		var oDate1 = new Date(minDate);
+		    var oDate2 = new Date(dateArr[i]);
+		    console.log(oDate1.getTime());
+		    console.log(oDate2.getTime());
+		    if (oDate1.getTime() != oDate2.getTime()) {
+		    	return app_alert("只能保存当天数据！");
+		    }
+    	}
+
+
 		var params = {
 			"HouseName"              :  $scope.dailyReportData.HouseName                        ,
 			"FarmId"                 :  $scope.sparraw_user_temp.farminfo.id                    ,

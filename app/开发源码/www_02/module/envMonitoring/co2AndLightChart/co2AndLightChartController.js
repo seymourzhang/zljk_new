@@ -46,7 +46,6 @@
 		if (Condition == "House") {
 			$scope.chartData.selectedHouseId = JSON.parse($scope.chartData.selectedHouseId).id;
 			for (var i = 0; i < $scope.sparraw_user_temp.houseinfos.length; i++) {
-				console.log($scope.sparraw_user_temp.houseinfos[i]);
 				if ($scope.sparraw_user_temp.houseinfos[i].id == $scope.chartData.selectedHouseId) {
 					$scope.chartData.selectedBatchId = $scope.sparraw_user_temp.houseinfos[i].BreedBatchId;
 				}
@@ -79,9 +78,6 @@
 			"ReqFlag"      :  ReqFlag                ,  //varchar型,"Y"-指定参数；"N"-没有指定参数
 			"DataRange"    :  DataRange                 //选择的时间
 		};
-
-		console.log($scope.sparraw_user_temp);
-		console.log(params);
 
 		Sparraw.ajaxPost('tempMobile/lcCurveReq', params, function(data){
 			if (data.ResponseDetail.Result == "Success") {
@@ -125,8 +121,6 @@
 			$scope.chartData.firstTimeDate = data.ResponseDetail.DataDate;
 		}
 		$scope.chartData.firstTime = false;
-		console.log("以下是测试代码");
-		console.log(data.ResponseDetail.DataDate);
 		//判断标题
 		if ($scope.chartData.charType == "02") {
 			$scope.chartData.NavTitle =  data.ResponseDetail.data_age;
@@ -238,7 +232,9 @@
 		$scope.chartData.charType 曲线图类型*/
 		if ($scope.chartData.turn == "up") {
 			if ($scope.chartData.charType == '02') {
+				$scope.chartData.assignOn = "N";
 				$scope.chartData.charType = "01";
+				$scope.chartData.selectedTime = "";
 			}else if ($scope.chartData.charType == '03') {
 				$scope.chartData.assignOn = "Y";
 	      		$scope.chartData.charType = "02";

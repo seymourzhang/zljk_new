@@ -430,6 +430,7 @@ angular.module('myApp.alarmSetting',
 
 		Sparraw.ajaxPost('alarmSettingMobile/itemApplyOther', params, function(data){
 			if (data.ResponseDetail.Result == "Success") {
+				$scope.copyDIV.hide();
 				Sparraw.myNotice("保存成功。");
 			}else{
 				Sparraw.myNotice(data.ResponseDetail.Error);

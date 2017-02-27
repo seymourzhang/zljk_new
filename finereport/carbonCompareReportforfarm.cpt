@@ -295,12 +295,7 @@ WHERE u.id = '${user_id}' and
 ${if(searchType==1 && find(':',time)==0,"1=1","1=0")}
 AND d.date = '${date}'
 ${if(len(farm_id)==0,"","and ((d.farm_id='"+farm_id+"'")}
-${if(len(house_id)==0,"","and d.house_id='"+house_id+"'")}
-${if(len(batch_no)==0,"","and c.batch_id='"+batch_no+"')")}
- 
-${if(len(farm2_id)==0,"","or (d.farm_id='"+farm2_id+"'")}
-${if(len(house2_id)==0,"","and d.house_id='"+house2_id+"'")}
-${if(len(batch2_no)==0,"","and c.batch_id='"+batch2_no+"'))")}
+${if(len(batch_no)==0,"","and substring_index(c.batch_id,'-',-1)=substring_index('"+batch_no+"','-',-1)))")}
 
 UNION
 
@@ -348,64 +343,17 @@ LEFT JOIN v_user u
 ON org.id = u.obj_id
 WHERE u.id = '${user_id}' and
 ${if(searchType==2,"1=1","1=0")}
-AND d.date BETWEEN date_sub(str_to_date('${date}', '%Y-%m-%d'), interval 6 day) AND str_to_date('${date}', '%Y-%m-%d')
+and d.date_age in (select date_age
+from rpt_monitor_month d1 
+where d1.date BETWEEN date_sub(str_to_date('${date}', '%Y-%m-%d'), interval 6 day) AND str_to_date('${date}', '%Y-%m-%d')
+${if(len(farm_id)==0,"","and d1.farm_id='"+farm_id+"'")}
+and d1.house_id = (select house_code from s_b_batch_curr
+where operation_date =
+(select min(operation_date) from s_b_batch_curr d1
+${if(len(farm_id)==0,"","where d1.farm_id='"+farm_id+"'")} )))
 ${if(len(farm_id)==0,"","and ((d.farm_id='"+farm_id+"'")}
-${if(len(house_id)==0,"","and d.house_id='"+house_id+"'")}
-${if(len(batch_no)==0,"","and c.batch_id='"+batch_no+"'))")}
+${if(len(batch_no)==0,"","and substring_index(c.batch_id,'-',-1)=substring_index('"+batch_no+"','-',-1)))")}
 
-UNION
- 
-SELECT
-  u.id user_id,
-  org2.id company_id,
-  org2.name_cn company_name,
-  org.id base_id,
-  org.name_cn base_name,
-  d.farm_id,
-  f.farm_name_chs,
-  d.house_id,
-  h.house_name,
-  d.date,
-  date_format(d.date, '%Y/%m/%d') AS time,
-  d.date_age,
-  c.batch_id,
-  d.batch_no,
-  (CASE WHEN ${index}=1 THEN if(ROUND(d.co2, 1)=-99,'',ROUND(d.co2, 1))
-        WHEN ${index}=2 THEN if(ROUND(d.high_alarm_co2, 1)=-99,'',ROUND(d.high_alarm_co2, 1))
-   ELSE ''
-   END) indexColumn
-FROM
-  rpt_monitor_month d
-  LEFT JOIN s_d_house h
-    ON h.farm_id = d.farm_id
-       AND h.id = d.house_id
-       AND h.freeze_status=0
-  LEFT JOIN s_d_farm f
-    ON f.id = d.farm_id
-    AND f.freeze_status=0
- LEFT JOIN s_b_batch_change c
-ON c.farm_id = d.farm_id
-AND c.house_code = d.house_id
-AND c.operation_type = 2
-  LEFT JOIN s_d_organization org
-    ON org.organization_id = f.id
-       AND org.level_id = (SELECT MAX(level_id)-1 max_level FROM s_d_organization)
-       AND org.freeze_status=0
-       AND org.parent_id = '${org_id}'
-  LEFT JOIN  s_d_organization org2
-    ON org2.id = org.parent_id
-    AND org2.freeze_status=0
-LEFT JOIN v_user u
-ON org.id = u.obj_id
-WHERE u.id = '${user_id}' and
-${if(searchType==2,"1=1","1=0")}
-and d.date_age in (select date_age from rpt_monitor_month d1 where d1.date BETWEEN date_sub(str_to_date('${date}', '%Y-%m-%d'), interval 6 day) AND str_to_date('${date}', '%Y-%m-%d')
-${if(len(farm_id)==0,"","and (d1.farm_id='"+farm_id+"'")}
-${if(len(house_id)==0,"","and d1.house_id='"+house_id+"'")})
-${if(len(farm2_id)==0,"","and (d.farm_id='"+farm2_id+"'")}
-${if(len(house2_id)==0,"","and d.house_id='"+house2_id+"'")}
-${if(len(batch2_no)==0,"","and c.batch_id='"+batch2_no+"'))")}
- 
 UNION
  
 SELECT
@@ -452,63 +400,16 @@ LEFT JOIN v_user u
 ON org.id = u.obj_id
 WHERE u.id = '${user_id}' and
   ${if(searchType==3,"1=1","1=0")}
-AND d.date BETWEEN date_sub(str_to_date('${date}', '%Y-%m-%d'), interval 29 day) AND str_to_date('${date}', '%Y-%m-%d')
+and d.date_age in (select date_age
+from rpt_monitor_month d1 
+where d1.date BETWEEN date_sub(str_to_date('${date}', '%Y-%m-%d'), interval 29 day) AND str_to_date('${date}', '%Y-%m-%d')
+${if(len(farm_id)==0,"","and d1.farm_id='"+farm_id+"'")}
+and d1.house_id = (select house_code from s_b_batch_curr
+where operation_date =
+(select min(operation_date) from s_b_batch_curr d1
+${if(len(farm_id)==0,"","where d1.farm_id='"+farm_id+"'")})))
 ${if(len(farm_id)==0,"","and ((d.farm_id='"+farm_id+"'")}
-${if(len(house_id)==0,"","and d.house_id='"+house_id+"'")}
-${if(len(batch_no)==0,"","and c.batch_id='"+batch_no+"'))")}
-
-union
- 
-SELECT
-  u.id user_id,
-  org2.id company_id,
-  org2.name_cn company_name,
-  org.id base_id,
-  org.name_cn base_name,
-  d.farm_id,
-  f.farm_name_chs,
-  d.house_id,
-  h.house_name,
-  d.date,
-  date_format(d.date, '%Y/%m/%d') AS time,
-  d.date_age,
-  c.batch_id,
-  d.batch_no,
- (CASE WHEN ${index}=1 THEN if(ROUND(d.co2, 1)=-99,'',ROUND(d.co2, 1))
-        WHEN ${index}=2 THEN if(ROUND(d.high_alarm_co2, 1)=-99,'',ROUND(d.high_alarm_co2, 1))
-   ELSE ''
-   END) indexColumn
-FROM
-  rpt_monitor_month d
-  LEFT JOIN s_d_house h
-    ON h.farm_id = d.farm_id
-       AND h.id = d.house_id
-       AND h.freeze_status=0
-  LEFT JOIN s_d_farm f
-    ON f.id = d.farm_id
-    AND f.freeze_status=0
- LEFT JOIN s_b_batch_change c
-ON c.farm_id = d.farm_id
-AND c.house_code = d.house_id
-AND c.operation_type = 2
-  LEFT JOIN s_d_organization org
-    ON org.organization_id = f.id
-       AND org.level_id = (SELECT MAX(level_id)-1 max_level FROM s_d_organization)
-       AND org.freeze_status=0
-       AND org.parent_id = '${org_id}'
-  LEFT JOIN  s_d_organization org2
-    ON org2.id = org.parent_id
-    AND org2.freeze_status=0
-LEFT JOIN v_user u
-ON org.id = u.obj_id
-WHERE u.id = '${user_id}' and
-  ${if(searchType==3,"1=1","1=0")}
-and d.date_age in (select date_age from rpt_monitor_month d1 where d1.date BETWEEN date_sub(str_to_date('${date}', '%Y-%m-%d'), interval 6 day) AND str_to_date('${date}', '%Y-%m-%d')
-${if(len(farm_id)==0,"","and (d1.farm_id='"+farm_id+"'")}
-${if(len(house_id)==0,"","and d1.house_id='"+house_id+"'")})
-${if(len(farm2_id)==0,"","and (d.farm_id='"+farm2_id+"'")}
-${if(len(house2_id)==0,"","and d.house_id='"+house2_id+"'")}
-${if(len(batch2_no)==0,"","and c.batch_id='"+batch2_no+"'))")}
+${if(len(batch_no)==0,"","and substring_index(c.batch_id,'-',-1)=substring_index('"+batch_no+"','-',-1)))")}
 
 UNION
 
@@ -573,12 +474,7 @@ ${if(searchType==1 && len(time)==5 && FIND(':',time)>0,"and 1=1"," and 1=0")}
 AND d.date = '${date}'
 and d.date_age between replace('${time}','%253A',':') and date_add(STR_TO_DATE(replace('${time}','%253A',':'),'%H:%i'), INTERVAL 30 MINUTE)
 ${if(len(farm_id)==0,"","and ((d.farm_id='"+farm_id+"'")}
-${if(len(house_id)==0,"","and d.house_id='"+house_id+"'")}
-${if(len(batch_no)==0,"","and c.batch_id='"+batch_no+"')")}
- 
-${if(len(farm2_id)==0,"","or (d.farm_id='"+farm2_id+"'")}
-${if(len(house2_id)==0,"","and d.house_id='"+house2_id+"'")}
-${if(len(batch2_no)==0,"","and c.batch_id='"+batch2_no+"'))")}
+${if(len(batch_no)==0,"","and substring_index(c.batch_id,'-',-1)=substring_index('"+batch_no+"','-',-1)))")}
 )z
 ORDER BY z.farm_id,z.house_id,z.date,z.time,z.date_age]]></Query>
 </TableData>
@@ -1100,7 +996,7 @@ reportFrame.style.left = "3px";]]></Content>
 <![CDATA[_self]]></TargetFrame>
 <Features width="600" height="400"/>
 <ReportletName showPI="true">
-<![CDATA[/zdyj/carbonCompareReport.cpt]]></ReportletName>
+<![CDATA[/zdyj/carbonCompareReportforfarm.cpt]]></ReportletName>
 </JavaScript>
 </JavaScript>
 </NameJavaScript>
@@ -1466,7 +1362,7 @@ time.reset();]]></Content>
 <Hotkeys>
 <![CDATA[enter]]></Hotkeys>
 </InnerWidget>
-<BoundsAttr x="823" y="44" width="84" height="21"/>
+<BoundsAttr x="834" y="12" width="84" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -1522,7 +1418,7 @@ time.reset();]]></Content>
 <FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
-<BoundsAttr x="245" y="12" width="60" height="21"/>
+<BoundsAttr x="42" y="186" width="60" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
@@ -1546,7 +1442,7 @@ time.reset();]]></Content>
 <![CDATA[{Name:栋舍,Key:house_id}]]></databinding>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="304" y="12" width="114" height="21"/>
+<BoundsAttr x="101" y="186" width="114" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -1562,7 +1458,7 @@ time.reset();]]></Content>
 <FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
-<BoundsAttr x="442" y="12" width="65" height="21"/>
+<BoundsAttr x="244" y="12" width="65" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.ComboBox">
@@ -1586,7 +1482,7 @@ time.reset();]]></Content>
 <![CDATA[{Name:批次,Key:batch_id}]]></databinding>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="507" y="12" width="112" height="21"/>
+<BoundsAttr x="309" y="12" width="112" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -1602,7 +1498,7 @@ time.reset();]]></Content>
 <FRFont name="微软雅黑" style="1" size="72" foreground="-16304285"/>
 <border style="0" color="-723724"/>
 </InnerWidget>
-<BoundsAttr x="641" y="11" width="63" height="21"/>
+<BoundsAttr x="442" y="12" width="63" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.DateEditor">
@@ -1638,7 +1534,7 @@ if(date_age!=""){
 </O>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="704" y="11" width="100" height="21"/>
+<BoundsAttr x="505" y="12" width="100" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -1735,7 +1631,7 @@ window.location="ReportServer?reportlet=zdyj/carbonReport.cpt&user_id="+user_id+
 <Hotkeys>
 <![CDATA[enter]]></Hotkeys>
 </InnerWidget>
-<BoundsAttr x="926" y="44" width="84" height="21"/>
+<BoundsAttr x="937" y="12" width="84" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -1815,7 +1711,7 @@ window.location="ReportServer?reportlet=zdyj/carbonReport.cpt&user_id="+user_id+
 </O>
 </widgetValue>
 </InnerWidget>
-<BoundsAttr x="823" y="12" width="187" height="21"/>
+<BoundsAttr x="626" y="12" width="187" height="21"/>
 </Widget>
 <Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
 <InnerWidget class="com.fr.form.ui.Label">
@@ -1859,12 +1755,11 @@ window.location="ReportServer?reportlet=zdyj/carbonReport.cpt&user_id="+user_id+
 <Display display="true"/>
 <DelayDisplayContent delay="false"/>
 <Position position="0"/>
-<Design_Width design_width="1188"/>
+<Design_Width design_width="1048"/>
 <MobileWidgetList>
-<Widget widgetName="date"/>
 <Widget widgetName="farm_id"/>
-<Widget widgetName="house_id"/>
 <Widget widgetName="batch_no"/>
+<Widget widgetName="date"/>
 <Widget widgetName="searchType"/>
 <Widget widgetName="farm2_id"/>
 <Widget widgetName="house2_id"/>
@@ -1874,13 +1769,14 @@ window.location="ReportServer?reportlet=zdyj/carbonReport.cpt&user_id="+user_id+
 <Widget widgetName="org_id"/>
 <Widget widgetName="user_id"/>
 <Widget widgetName="date_age"/>
+<Widget widgetName="house_id"/>
 </MobileWidgetList>
 <WidgetNameTagMap>
 <NameTag name="date" tag="    日期:"/>
 <NameTag name="house_id" tag="    栋舍:"/>
 <NameTag name="batch_no" tag="    批次:"/>
 <NameTag name="house2_id" tag="    栋舍:"/>
-<NameTag name="searchType" tag="   时间段:"/>
+<NameTag name="searchType" tag="    日期:"/>
 <NameTag name="index" tag="    指标:"/>
 <NameTag name="farm2_id" tag="    农场:"/>
 <NameTag name="date_age" tag="日龄:"/>
@@ -1891,7 +1787,7 @@ window.location="ReportServer?reportlet=zdyj/carbonReport.cpt&user_id="+user_id+
 <NameTag name="farm_id" tag="    农场:"/>
 </WidgetNameTagMap>
 </Layout>
-<DesignAttr width="1188" height="67"/>
+<DesignAttr width="1048" height="38"/>
 </ParameterUI>
 </ReportParameterAttr>
 <StyleList/>
